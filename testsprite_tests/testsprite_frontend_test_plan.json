@@ -1,0 +1,487 @@
+[
+  {
+    "id": "TC001",
+    "title": "User Registration Success",
+    "description": "Verify that a new user can successfully register with valid credentials.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to the registration page."
+      },
+      {
+        "type": "action",
+        "description": "Enter valid username, email, and password."
+      },
+      {
+        "type": "action",
+        "description": "Submit the registration form."
+      },
+      {
+        "type": "assertion",
+        "description": "Check the user account is created and user is logged in."
+      }
+    ]
+  },
+  {
+    "id": "TC002",
+    "title": "User Registration Failure with Invalid Email",
+    "description": "Ensure registration fails when an invalid email format is submitted.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Go to the registration page."
+      },
+      {
+        "type": "action",
+        "description": "Input valid username and password with invalid email format."
+      },
+      {
+        "type": "action",
+        "description": "Try to submit the registration form."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify proper validation error message for invalid email is displayed and registration is blocked."
+      }
+    ]
+  },
+  {
+    "id": "TC003",
+    "title": "User Login Success",
+    "description": "Confirm user can log in with correct credentials.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open the login page."
+      },
+      {
+        "type": "action",
+        "description": "Enter registered username/email and correct password."
+      },
+      {
+        "type": "action",
+        "description": "Submit the login form."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify user is authenticated and redirected to dashboard."
+      }
+    ]
+  },
+  {
+    "id": "TC004",
+    "title": "User Login Failure with Incorrect Password",
+    "description": "Verify system prevents login with wrong password and shows error message.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Navigate to login page."
+      },
+      {
+        "type": "action",
+        "description": "Enter valid username/email and wrong password."
+      },
+      {
+        "type": "action",
+        "description": "Click login."
+      },
+      {
+        "type": "assertion",
+        "description": "Check error message is displayed and login is denied."
+      }
+    ]
+  },
+  {
+    "id": "TC005",
+    "title": "Bulk Lot Image Upload via Drag and Drop",
+    "description": "Verify multiple images can be uploaded by drag and drop with preview and edit options.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open bulk lot image upload interface."
+      },
+      {
+        "type": "action",
+        "description": "Drag and drop multiple valid image files into the upload area."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm image previews are shown with options to edit or remove each image."
+      }
+    ]
+  },
+  {
+    "id": "TC006",
+    "title": "Bulk Lot Image Upload via File Selector",
+    "description": "Verify multiple images can be selected and uploaded via file selector with preview and edit options.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Open the upload interface."
+      },
+      {
+        "type": "action",
+        "description": "Use file selector to choose multiple valid image files."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify image preview thumbnails appear with editing/removal options."
+      }
+    ]
+  },
+  {
+    "id": "TC007",
+    "title": "Unsupported File Format Upload Handling",
+    "description": "Ensure the system rejects unsupported file formats during image upload with appropriate error feedback.",
+    "category": "error handling",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Attempt to upload unsupported file formats (e.g. .exe, .txt) via upload interface."
+      },
+      {
+        "type": "assertion",
+        "description": "Check that upload is blocked and meaningful error messages are displayed."
+      }
+    ]
+  },
+  {
+    "id": "TC008",
+    "title": "AI Vision API Item Recognition Accuracy Above Threshold",
+    "description": "Test that AI vision API identifies items correctly with confidence scores above 80% for common categories.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Upload known test images containing collectible items representing common categories."
+      },
+      {
+        "type": "action",
+        "description": "Trigger AI item recognition processing."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify items are identified correctly with confidence scores >= 80%."
+      }
+    ]
+  },
+  {
+    "id": "TC009",
+    "title": "Handling AI Vision API Failure",
+    "description": "Verify system handles AI vision API timeout or failure gracefully providing relevant feedback to the user.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Simulate AI vision API failure or timeout after uploading images."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm user is notified of processing error and system allows retry or alternative actions."
+      }
+    ]
+  },
+  {
+    "id": "TC010",
+    "title": "Fetching Real-time eBay Sold Prices and Active Listings",
+    "description": "Validate that eBay data retrieval returns real-time sold prices and active listings within 5 seconds per request.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Trigger eBay data fetching for identified items."
+      },
+      {
+        "type": "assertion",
+        "description": "Measure response time; ensure results include sold price, listing counts, and historical pricing within 5 seconds."
+      }
+    ]
+  },
+  {
+    "id": "TC011",
+    "title": "Fallback Scraper Activation on eBay API Failure",
+    "description": "Confirm the system activates scraper fallback to retrieve eBay data if official API fails.",
+    "category": "error handling",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Cause eBay official API to fail or be unreachable during data fetch."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify that scraper fallback activates and eBay data is still retrieved correctly."
+      }
+    ]
+  },
+  {
+    "id": "TC012",
+    "title": "Value Calculation Engine Accuracy Within Margin",
+    "description": "Verify the value calculation engine computes lot values within a 15% margin of accuracy using GPT estimates and statistical filtering.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Process bulk lot analysis with known datasets."
+      },
+      {
+        "type": "assertion",
+        "description": "Check final lot valuation is accurate within 15% margin compared to benchmark values."
+      }
+    ]
+  },
+  {
+    "id": "TC013",
+    "title": "Outlier Filtering in Value Calculation",
+    "description": "Verify that statistical filtering effectively identifies and removes pricing outliers from calculations.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Analyze bulk lot data including known price outliers."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm outliers are excluded from final value aggregation."
+      }
+    ]
+  },
+  {
+    "id": "TC014",
+    "title": "Results Table Interactivity and Sorting",
+    "description": "Ensure results are displayed in a sortable, interactive table with summary statistics and eBay search links.",
+    "category": "ui",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Complete bulk lot analysis and view results table."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify columns can be sorted ascending and descending, summary stats are accurate, and eBay search links open correct pages."
+      }
+    ]
+  },
+  {
+    "id": "TC015",
+    "title": "CSV Export of Analysis Results",
+    "description": "Verify user can export lot analysis results to a CSV file that contains all relevant data accurately.",
+    "category": "functional",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Perform lot analysis."
+      },
+      {
+        "type": "action",
+        "description": "Click on export to CSV button."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm CSV file downloads and contains all expected fields and data matching the results table."
+      }
+    ]
+  },
+  {
+    "id": "TC016",
+    "title": "Analysis History Retrieval and Display",
+    "description": "Validate that users can view and retrieve their previous analysis history accurately.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in to user account with existing analysis history."
+      },
+      {
+        "type": "action",
+        "description": "Navigate to analysis history page."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify past analyses are listed with correct details and can be re-opened."
+      }
+    ]
+  },
+  {
+    "id": "TC017",
+    "title": "System Performance Under 50 Concurrent Users",
+    "description": "Test system stability and response times when 50 users perform analysis concurrently.",
+    "category": "performance",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Simulate 50 simultaneous user sessions conducting lot uploads and analyses."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify stable system performance, no crashes, and API response times under 10 seconds."
+      }
+    ]
+  },
+  {
+    "id": "TC018",
+    "title": "API Response Time Within SLA",
+    "description": "Confirm all API endpoints respond within 10 seconds under normal usage conditions.",
+    "category": "performance",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Measure response times of main APIs including image processing, eBay data fetching, and value calculation."
+      },
+      {
+        "type": "assertion",
+        "description": "Assert all API responses complete within 10 seconds."
+      }
+    ]
+  },
+  {
+    "id": "TC019",
+    "title": "UI Accessibility Compliance",
+    "description": "Verify UI components and pages conform to WCAG 2.1 AA accessibility standards.",
+    "category": "ui",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Run accessibility audits on main user workflows using automated tools and manual keyboard navigation."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm no critical accessibility issues and all controls are usable via keyboard and assistive technologies."
+      }
+    ]
+  },
+  {
+    "id": "TC020",
+    "title": "Robust Error Handling and Logging for User Interactions",
+    "description": "Ensure all user interactions handle errors gracefully and log errors appropriately for diagnostics.",
+    "category": "error handling",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Simulate errors in user workflows, including upload failures, API errors, and authentication issues."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify informative error messages are shown and error events are captured in system logs."
+      }
+    ]
+  },
+  {
+    "id": "TC021",
+    "title": "Server-side Image Optimization and Thumbnail Generation",
+    "description": "Validate that uploaded images are optimized server-side and thumbnails are generated correctly in expected formats.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Upload images of various sizes and formats."
+      },
+      {
+        "type": "assertion",
+        "description": "Check optimized images and thumbnails are stored and accessible with correct dimensions and quality."
+      }
+    ]
+  },
+  {
+    "id": "TC022",
+    "title": "Session Management and JWT Refresh Tokens",
+    "description": "Verify session persists correctly and JWT refresh tokens renew sessions without requiring user login.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Log in and obtain JWT token."
+      },
+      {
+        "type": "action",
+        "description": "Wait for token expiration time."
+      },
+      {
+        "type": "action",
+        "description": "Ensure the refresh token is used to renew JWT token automatically."
+      },
+      {
+        "type": "assertion",
+        "description": "Confirm user remains logged in with seamless session continuity."
+      }
+    ]
+  },
+  {
+    "id": "TC023",
+    "title": "Security Vulnerability Scan for Authentication System",
+    "description": "Check that authentication system has no critical security flaws such as weak password storage or token leakage.",
+    "category": "security",
+    "priority": "High",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Perform penetration testing and static code analysis on auth modules."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify passwords are hashed securely, tokens are stored and transmitted safely, and no critical vulnerabilities exist."
+      }
+    ]
+  },
+  {
+    "id": "TC024",
+    "title": "Continuous Integration Workflow Trigger",
+    "description": "Validate that configured GitHub Actions workflows run automated testing and linting on pull requests.",
+    "category": "functional",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Create a new pull request with code changes."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify automated tests and linting are triggered and complete successfully."
+      }
+    ]
+  },
+  {
+    "id": "TC025",
+    "title": "System Uptime and Performance Monitoring Alerts",
+    "description": "Check that real-time performance monitoring captures metrics and triggers alerts on anomalies or downtime.",
+    "category": "performance",
+    "priority": "Medium",
+    "steps": [
+      {
+        "type": "action",
+        "description": "Simulate system performance degradation or outage."
+      },
+      {
+        "type": "assertion",
+        "description": "Verify monitoring dashboard updates and alerts are sent automatically."
+      }
+    ]
+  }
+]

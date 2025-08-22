@@ -1,0 +1,171 @@
+{
+  "meta": {
+    "project": "SIBI - Should I Buy It | Lot Analyzer",
+    "date": "2025-08-17",
+    "prepared_by": "Software Development Manager"
+  },
+  "product_overview": "SIBI is an AI-powered web application that assists eBay resellers in quickly and accurately evaluating bulk lots of collectible items by using computer vision and real-time eBay data to provide market valuations and item identification.",
+  "core_goals": [
+    "Enable quick and accurate identification of items in bulk lot photos using AI vision.",
+    "Retrieve and analyze real-time and historical eBay pricing data to inform purchasing decisions.",
+    "Calculate both AI-estimated and market-based values to provide comprehensive lot valuations.",
+    "Filter out pricing outliers for more accurate valuation results.",
+    "Present interactive and exportable analysis results to users.",
+    "Provide user authentication, history tracking, and settings management.",
+    "Ensure system performance, scalability, and maintainability."
+  ],
+  "key_features": [
+    "AI-Powered Item Recognition with confidence scores supporting multiple collectible categories.",
+    "Integration with eBay sold prices, active listing counts, and historical pricing data using both official APIs and scraper fallback.",
+    "Value Calculation Engine utilizing GPT for estimates and statistical methods for outlier filtering.",
+    "Interactive, sortable results table with summary statistics, CSV export, and eBay search links.",
+    "Basic user authentication, session management, and analysis history storage.",
+    "Image upload and processing with server-side optimization and thumbnail generation.",
+    "Real-time performance monitoring and error handling.",
+    "Comprehensive testing infrastructure and continuous integration/continuous deployment with automated workflows."
+  ],
+  "user_flow_summary": [
+    "User registers or logs in to access the application.",
+    "User uploads multiple images of the bulk lot via drag-and-drop or file selector with image preview and edit options.",
+    "System processes images with AI vision API to identify items and assign confidence scores.",
+    "System fetches real-time eBay sold prices and active listings, including historical pricing data.",
+    "Value calculation engine analyzes data, filters out outliers, and aggregates total lot value.",
+    "Results are displayed in a sortable, interactive table with summary statistics and links to eBay pages.",
+    "User can export the results as CSV and view previous analyses in their history.",
+    "Performance and usage metrics are collected in the background for monitoring and optimization."
+  ],
+  "validation_criteria": [
+    "AI item recognition accuracy exceeds 80% for common categories.",
+    "eBay data retrieval operates reliably within 5 seconds per request.",
+    "Value calculations remain within a 15% margin of accuracy.",
+    "System supports at least 50 concurrent users with stable performance.",
+    "API response times under 10 seconds in typical usage.",
+    "Code coverage exceeds 80% with no critical security vulnerabilities.",
+    "UI is responsive and meets WCAG 2.1 AA accessibility standards.",
+    "All user interactions include robust error handling and logging.",
+    "Successful CSV export and accurate analysis history retrieval.",
+    "System uptime achieves 99.9% availability with monitored performance alerts."
+  ],
+  "code_summary": {
+    "tech_stack": [
+      "TypeScript",
+      "Next.js 14",
+      "React 18",
+      "MongoDB",
+      "Redis",
+      "Tailwind CSS",
+      "Jest",
+      "React Testing Library",
+      "Playwright",
+      "MSW (Mock Service Worker)"
+    ],
+    "features": [
+      {
+        "name": "AI-Powered Image Analysis",
+        "description": "Core functionality for analyzing eBay lot images using OpenAI Vision API and eBay data scraping",
+        "files": [
+          "lib/ai-vision.ts",
+          "lib/ebay-service.ts",
+          "lib/analysis-service.ts",
+          "components/ImageUpload.tsx",
+          "app/analyze/page.tsx"
+        ]
+      },
+      {
+        "name": "Authentication System",
+        "description": "Complete JWT-based authentication with password hashing, refresh tokens, and session management",
+        "files": [
+          "lib/auth-utils.ts",
+          "lib/auth-middleware-simple.ts",
+          "lib/session-manager.ts",
+          "contexts/AuthContext.tsx",
+          "components/auth/LoginForm.tsx",
+          "components/auth/RegisterForm.tsx",
+          "app/api/auth/login/route.ts",
+          "app/api/auth/register/route.ts"
+        ]
+      },
+      {
+        "name": "Database Services",
+        "description": "MongoDB integration with Redis caching, optimization, and maintenance services",
+        "files": [
+          "lib/database.ts",
+          "lib/database-service.ts",
+          "lib/database-optimized.ts",
+          "lib/redis-cache.ts",
+          "lib/database-maintenance.ts",
+          "types/database.ts"
+        ]
+      },
+      {
+        "name": "Performance Monitoring",
+        "description": "Real-time performance monitoring with metrics collection, alerts, and optimization recommendations",
+        "files": [
+          "lib/performance-monitor.ts",
+          "components/PerformanceMonitor.tsx",
+          "app/api/performance/route.ts",
+          "app/performance-monitor/page.tsx"
+        ]
+      },
+      {
+        "name": "Image Processing",
+        "description": "Server-side image optimization using Sharp library with thumbnail generation and format conversion",
+        "files": [
+          "lib/image-utils.ts",
+          "app/api/upload/route.ts"
+        ]
+      },
+      {
+        "name": "API Utilities",
+        "description": "Enhanced API utilities with caching, compression, rate limiting, and performance metrics",
+        "files": [
+          "lib/api-utils-enhanced.ts",
+          "app/api/health/route.ts",
+          "app/api/analysis-history/route.ts"
+        ]
+      },
+      {
+        "name": "UI Components",
+        "description": "Reusable UI components built with Tailwind CSS and Lucide React icons",
+        "files": [
+          "components/ui/button.tsx",
+          "components/ui/card.tsx",
+          "components/ui/badge.tsx",
+          "components/ui/input.tsx",
+          "components/ui/select.tsx"
+        ]
+      },
+      {
+        "name": "Testing Infrastructure",
+        "description": "Comprehensive testing setup with Jest, React Testing Library, Playwright, and MSW",
+        "files": [
+          "jest.config.js",
+          "jest.setup.js",
+          "tsconfig.jest.json",
+          "playwright.config.ts",
+          "__tests__/utils/test-utils.tsx",
+          "__tests__/mocks/handlers.ts"
+        ]
+      },
+      {
+        "name": "CI/CD Pipeline",
+        "description": "GitHub Actions workflows for automated testing, linting, and deployment",
+        "files": [
+          ".github/workflows/test.yml",
+          ".github/workflows/ci.yml"
+        ]
+      },
+      {
+        "name": "Production Deployment",
+        "description": "Vercel deployment configuration with production monitoring, security, and optimization",
+        "files": [
+          "vercel.json",
+          "lib/production-config.ts",
+          "lib/production-security.ts",
+          "lib/production-monitoring.ts",
+          "scripts/deploy-production.js"
+        ]
+      }
+    ]
+  }
+}
