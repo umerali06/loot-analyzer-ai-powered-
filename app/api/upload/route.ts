@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { withAuth } from '@/lib/auth-middleware-simple'
-import { createSuccessResponse, createErrorResponse, addPerformanceHeaders } from '@/lib/api-utils-enhanced'
-import { processImage } from '@/lib/image-utils'
+import { withAuth } from '../../../lib/auth-middleware-simple'
+import { createSuccessResponse, createErrorResponse, addPerformanceHeaders } from '../../../lib/api-utils-enhanced'
+import { processImage } from '../../../lib/image-utils'
+
+// Force dynamic rendering since this route needs to process form data
+export const dynamic = 'force-dynamic'
 
 export async function POST(request: NextRequest) {
   try {

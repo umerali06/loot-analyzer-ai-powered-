@@ -1,8 +1,11 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { withAuth } from '@/lib/auth-middleware-simple'
-import { createSuccessResponse, createErrorResponse } from '@/lib/api-utils-enhanced'
-import { analysisService } from '@/lib/database-service'
-import { scraperService } from '@/lib/scraper-service'
+import { withAuth } from '../../../../lib/auth-middleware-simple'
+import { createSuccessResponse, createErrorResponse } from '../../../../lib/api-utils-enhanced'
+import { analysisService } from '../../../../lib/database-service'
+import { scraperService } from '../../../../lib/scraper-service'
+
+// Force dynamic rendering since this route uses auth middleware
+export const dynamic = 'force-dynamic'
 
 async function handler(req: NextRequest): Promise<NextResponse> {
   try {
