@@ -2,8 +2,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
-import { useAuth } from '@/contexts/AuthContext'
-import PasswordStrengthIndicator from '@/components/auth/PasswordStrengthIndicator'
+import { useAuth } from '../../contexts/AuthContext'
+import PasswordStrengthIndicator from '../../components/auth/PasswordStrengthIndicator'
 import { Eye, EyeOff, Lock, Mail, User, Shield, Zap, ArrowRight, Star, Camera, BarChart3, TrendingUp } from 'lucide-react'
 
 export default function AuthPage() {
