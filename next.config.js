@@ -6,6 +6,8 @@ const nextConfig = {
     esmExternals: false,
     optimizePackageImports: [],
     serverComponentsExternalPackages: ['sharp'],
+    // Force fresh build
+    forceSwcTransforms: true,
   },
 
   // Image optimization
