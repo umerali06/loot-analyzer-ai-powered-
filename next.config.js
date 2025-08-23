@@ -1,29 +1,25 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Minimal configuration to prevent build issues
+  // Minimal configuration
   experimental: {
-    // Disable all experimental features
     esmExternals: false,
     forceSwcTransforms: false,
   },
 
-  // Disable minification completely
+  // Disable minification to prevent errors
   swcMinify: false,
 
-  // Disable all webpack optimizations
+  // Basic webpack config
   webpack: (config) => {
+    // Minimal optimizations only
     config.optimization.minimize = false
-    config.optimization.usedExports = false
-    config.optimization.sideEffects = false
-    config.optimization.splitChunks = false
     return config
   },
 
-  // Disable all optimizations
+  // Basic settings
   compress: false,
   poweredByHeader: false,
-  reactStrictMode: true,
+  reactStrictMode: false,
 }
 
 module.exports = nextConfig
-
