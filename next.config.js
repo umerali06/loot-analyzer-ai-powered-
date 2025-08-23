@@ -10,11 +10,18 @@ const nextConfig = {
   compress: true,
   poweredByHeader: false,
 
-  webpack: (config) => {
+  webpack: (config, { isServer, dev }) => {
     // 🔑 Forcefully remove the trace plugin that causes recursion
-    config.plugins = config.plugins.filter(
-      (plugin) => plugin.constructor?.name !== 'TraceEntryPointsPlugin'
-    )
+    if (!dev) {
+      config.plugins = config.plugins.filter(
+        (plugin) => {
+          const pluginName = plugin.constructor?.name || '';
+          return !pluginName.includes('Trace') && 
+                 !pluginName.includes('BuildTraces') &&
+                 !pluginName.includes('EntryPoints');
+        }
+      );
+    }
 
     return config
   },
