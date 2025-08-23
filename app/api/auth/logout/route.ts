@@ -6,8 +6,11 @@ import {
   logResponse, 
   generateRequestId,
   corsHeaders
-} from '@/lib/api-utils'
-import { blacklistToken, extractTokenFromHeader } from '@/lib/auth-utils'
+} from '../../../../lib/api-utils'
+
+// Force dynamic rendering since this route needs to access request headers
+export const dynamic = 'force-dynamic'
+import { blacklistToken, extractTokenFromHeader } from '../../../../lib/auth-utils'
 
 export async function POST(request: NextRequest) {
   const requestId = generateRequestId()

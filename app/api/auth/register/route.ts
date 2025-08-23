@@ -6,7 +6,10 @@ import {
   validateEmail,
   validateUsername,
   validatePassword
-} from '@/lib/auth-utils'
+} from '../../../../lib/auth-utils'
+
+// Force dynamic rendering since this route needs to access request headers
+export const dynamic = 'force-dynamic'
 import { 
   successResponse, 
   errorResponse, 
@@ -15,8 +18,8 @@ import {
   logResponse, 
   generateRequestId,
   corsHeaders
-} from '@/lib/api-utils'
-import { userService, userSessionService } from '@/lib/database-service'
+} from '../../../../lib/api-utils'
+import { userService, userSessionService } from '../../../../lib/database-service'
 const { ObjectId } = require('mongodb')
 
 export async function POST(request: NextRequest) {

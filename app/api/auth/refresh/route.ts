@@ -5,7 +5,10 @@ import {
   generateRefreshToken,
   checkRefreshRateLimit,
   resetRefreshRateLimit
-} from '@/lib/auth-utils'
+} from '../../../../lib/auth-utils'
+
+// Force dynamic rendering since this route needs to access request headers
+export const dynamic = 'force-dynamic'
 import { 
   successResponse, 
   errorResponse, 
@@ -14,8 +17,8 @@ import {
   logResponse, 
   generateRequestId,
   corsHeaders
-} from '@/lib/api-utils'
-import { userService } from '@/lib/database-service'
+} from '../../../../lib/api-utils'
+import { userService } from '../../../../lib/database-service'
 
 export async function POST(request: NextRequest) {
   const requestId = generateRequestId()
@@ -115,7 +118,7 @@ export async function POST(request: NextRequest) {
     // Update the session's access token in the database
     // This is crucial to keep the session valid after token refresh
     try {
-      const { userSessionService } = await import('@/lib/database-service')
+      const { userSessionService } = await import('../../../../lib/database-service')
       
       // Find the session by the old refresh token and update it with new tokens
       const sessionsResult = await userSessionService.find({ 
