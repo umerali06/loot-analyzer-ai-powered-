@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { withAuth } from '@/lib/auth-middleware-simple'
-import { enhancedAPI, createSuccessResponse, createErrorResponse, addPerformanceHeaders } from '@/lib/api-utils-enhanced'
-import { getCachedData } from '@/lib/api-utils-enhanced'
-import { AIVisionService } from '@/lib/ai-vision'
-import { EbayService } from '@/lib/ebay-service'
-import { analysisService } from '@/lib/database-service'
+import { withAuth } from '../../../lib/auth-middleware-simple'
+import { enhancedAPI, createSuccessResponse, createErrorResponse, addPerformanceHeaders } from '../../../lib/api-utils-enhanced'
+import { getCachedData } from '../../../lib/api-utils-enhanced'
+import { AIVisionService } from '../../../lib/ai-vision'
+import { EbayService } from '../../../lib/ebay-service'
+import { analysisService } from '../../../lib/database-service'
 
 import { ObjectId } from 'mongodb'
 
