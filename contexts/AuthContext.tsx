@@ -1,7 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useReducer, useEffect, ReactNode, useCallback } from 'react'
-import { User, AuthResponse, AuthRequest, RegisterRequest } from '@/types/auth'
+import { User, AuthResponse, AuthRequest, RegisterRequest } from '../types/auth'
 
 // Auth state interface
 interface AuthState {

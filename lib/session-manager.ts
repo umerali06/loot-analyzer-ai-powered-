@@ -3,7 +3,7 @@
  * Handles user sessions, roles, permissions, and access control
  */
 
-import { TokenPayload } from '@/types/auth'
+import { TokenPayload } from '../types/auth'
 
 // Session data interface
 export interface SessionData {

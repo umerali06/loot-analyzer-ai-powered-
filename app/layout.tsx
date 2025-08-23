@@ -1,12 +1,12 @@
 // Import MongoDB complete reset system early to ensure real MongoDB is available
-import '@/lib/mongodb-complete-reset'
+import '../lib/mongodb-complete-reset'
 
 import type { Metadata } from 'next'
 import { Inter } from 'next/font/google'
 import './globals.css'
 import { AuthProvider } from '../contexts/AuthContext'
-import ErrorBoundary from '@/components/ErrorBoundary'
-import Navigation from '@/components/Navigation'
+import ErrorBoundary from '../components/ErrorBoundary'
+import Navigation from '../components/Navigation'
 
 const inter = Inter({ subsets: ['latin'] })
 

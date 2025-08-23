@@ -1,5 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { withAuth } from '@/lib/auth-middleware-simple'
+import { withAuth } from '../../../../lib/auth-middleware-simple'
+
+// Force dynamic rendering since this route needs to access request headers
+export const dynamic = 'force-dynamic'
 import {
   successResponse,
   errorResponse,
@@ -7,8 +10,8 @@ import {
   logResponse,
   generateRequestId,
   corsHeaders
-} from '@/lib/api-utils'
-import { userSessionService } from '@/lib/database-service'
+} from '../../../../lib/api-utils'
+import { userSessionService } from '../../../../lib/database-service'
 
 // GET /api/auth/sessions - List user's active sessions
 const getSessions = async (request: NextRequest, user: any, session: any) => {
@@ -67,7 +70,7 @@ const deleteSessions = async (request: NextRequest, user: any, session: any) => 
   logRequest(request, { requestId, endpoint: '/api/auth/sessions', userId: user?.userId })
 
   try {
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = request.nextUrl
     const sessionId = searchParams.get('sessionId')
     const terminateAll = searchParams.get('terminateAll') === 'true'
 

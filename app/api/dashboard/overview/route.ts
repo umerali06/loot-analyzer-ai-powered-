@@ -1,8 +1,8 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { withAuth } from '@/lib/auth-middleware-simple'
-import { createSuccessResponse, createErrorResponse, addPerformanceHeaders } from '@/lib/api-utils-enhanced'
-import { analysisService } from '@/lib/database-service'
-import { getDatabase } from '@/lib/database'
+import { withAuth } from '../../../../lib/auth-middleware-simple'
+import { createSuccessResponse, createErrorResponse, addPerformanceHeaders } from '../../../../lib/api-utils-enhanced'
+import { analysisService } from '../../../../lib/database-service'
+import { getDatabase } from '../../../../lib/database'
 
 async function handler(req: NextRequest): Promise<NextResponse> {
   console.log('🚀 Dashboard overview API called with method:', req.method)

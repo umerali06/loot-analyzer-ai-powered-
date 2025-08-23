@@ -18,7 +18,7 @@ import {
   User,
   UserSession,
   Analysis
-} from '@/types/database'
+} from '../types/database'
 import { getDatabase, getClient } from './database'
 
 /**

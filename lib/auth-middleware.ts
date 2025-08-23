@@ -6,7 +6,7 @@ import {
   checkRefreshRateLimit,
   resetRefreshRateLimit
 } from './auth-utils'
-import { TokenPayload } from '@/types/auth'
+import { TokenPayload } from '../types/auth'
 
 // Enhanced middleware configuration
 export interface AuthMiddlewareConfig {

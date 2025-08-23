@@ -1,10 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { withAuth } from '@/lib/auth-middleware-simple'
-import { createSuccessResponse, createErrorResponse, addPerformanceHeaders, enhancedAPI } from '@/lib/api-utils-enhanced'
+import { withAuth } from '../../../lib/auth-middleware-simple'
+import { createSuccessResponse, createErrorResponse, addPerformanceHeaders, enhancedAPI } from '../../../lib/api-utils-enhanced'
 
 export async function GET(request: NextRequest) {
   try {
-    const { searchParams } = new URL(request.url)
+    const { searchParams } = request.nextUrl
     const detailed = searchParams.get('detailed') === 'true'
     const limit = parseInt(searchParams.get('limit') || '100')
 

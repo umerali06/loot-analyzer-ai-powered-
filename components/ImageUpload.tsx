@@ -2,7 +2,7 @@
 
 import React, { useState, useCallback, useRef, DragEvent } from 'react'
 import { Upload, X, CheckCircle, AlertCircle, Loader2 } from 'lucide-react'
-import { processBatchFiles } from '@/lib/image-utils-client'
+import { processBatchFiles } from '../lib/image-utils-client'
 
 export interface UploadedImage {
   id: string

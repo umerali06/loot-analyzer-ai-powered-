@@ -3,7 +3,7 @@
  * Simple tools for testing authentication flows and security validation
  */
 
-import { User } from '@/types/auth'
+import { User } from '../types/auth'
 import { 
   generateSecureAccessToken, 
   generateSecureRefreshToken,

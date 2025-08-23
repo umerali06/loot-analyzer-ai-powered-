@@ -1,7 +1,7 @@
 import bcrypt from 'bcryptjs'
 import jwt from 'jsonwebtoken'
-import { PasswordValidation, TokenPayload, User as AuthUser } from '@/types/auth'
-import { User as DbUser } from '@/types/database'
+import { PasswordValidation, TokenPayload, User as AuthUser } from '../types/auth'
+import { User as DbUser } from '../types/database'
 import { PASSWORD_CONFIG } from './password-config'
 
 // JWT Configuration

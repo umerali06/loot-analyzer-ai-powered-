@@ -3,7 +3,7 @@
  * Handles real-time product search, pricing, and market analysis
  */
 
-import { EbayData, EbaySearchResults } from '@/types'
+import { EbayData, EbaySearchResults } from '../types'
 
 export interface EbayProduct {
   id: string

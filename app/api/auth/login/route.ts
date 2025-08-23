@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { comparePassword, generateAccessToken, generateRefreshToken } from '@/lib/auth-utils'
-import { validateEmail } from '@/lib/auth-utils'
+import { comparePassword, generateAccessToken, generateRefreshToken } from '../../../../lib/auth-utils'
+
+// Force dynamic rendering since this route needs to access request headers
+export const dynamic = 'force-dynamic'
+import { validateEmail } from '../../../../lib/auth-utils'
 import { 
   successResponse, 
   errorResponse, 
@@ -9,8 +12,8 @@ import {
   logResponse, 
   generateRequestId,
   corsHeaders
-} from '@/lib/api-utils'
-import { userService, userSessionService } from '@/lib/database-service'
+} from '../../../../lib/api-utils'
+import { userService, userSessionService } from '../../../../lib/database-service'
 
 export async function POST(request: NextRequest) {
   const requestId = generateRequestId()

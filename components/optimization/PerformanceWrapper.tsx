@@ -1,7 +1,7 @@
 'use client'
 
 import React, { Suspense, lazy, memo, useMemo, useCallback, useEffect } from 'react'
-import { ComponentOptimizer, PerformanceMonitor } from '@/lib/performance-optimizer'
+import { ComponentOptimizer, PerformanceMonitor } from '../../lib/performance-optimizer'
 
 interface PerformanceWrapperProps {
   children: React.ReactNode

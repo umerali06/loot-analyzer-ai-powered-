@@ -203,7 +203,7 @@ export function requireAuth(request: NextRequest): { isAuthenticated: boolean; u
 export function logRequest(request: NextRequest, metadata?: Record<string, any>) {
   const logData = {
     method: request.method,
-    url: request.url,
+    url: request.nextUrl?.href || 'unknown',
     userAgent: request.headers.get('user-agent'),
     timestamp: new Date().toISOString(),
     ...metadata
@@ -244,7 +244,7 @@ export function sanitizeError(error: any, isProduction: boolean = false): string
 
 // Parse pagination parameters
 export function parsePaginationParams(request: NextRequest) {
-  const { searchParams } = new URL(request.url)
+  const { searchParams } = request.nextUrl
   
   const page = parseInt(searchParams.get('page') || '1')
   const limit = parseInt(searchParams.get('limit') || '20')

@@ -1,5 +1,5 @@
 import OpenAI from 'openai'
-import { Item } from '@/types'
+import { Item } from '../types'
 
 // Rate limiting configuration
 const RATE_LIMIT_DELAY = 1000 // 1 second between requests

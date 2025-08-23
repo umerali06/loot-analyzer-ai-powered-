@@ -3,7 +3,7 @@
 import React, { useState } from 'react'
 import { Eye, EyeOff, Mail, Lock, AlertCircle, CheckCircle } from 'lucide-react'
 import { useAuth } from '../../contexts/AuthContext'
-import { validateEmail } from '@/lib/auth-utils'
+import { validateEmail } from '../../lib/auth-utils'
 
 interface LoginFormProps {
   onSwitchToRegister: () => void

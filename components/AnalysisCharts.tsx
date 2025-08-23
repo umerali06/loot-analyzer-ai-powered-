@@ -1,8 +1,8 @@
 'use client'
 
 import React, { useMemo, useCallback } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Badge } from '@/components/ui/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from './ui/card'
+import { Badge } from './ui/badge'
 import { 
   BarChart3, 
   TrendingUp, 
@@ -12,7 +12,7 @@ import {
   Monitor,
   Download
 } from 'lucide-react'
-import { Button } from '@/components/ui/button'
+import { Button } from './ui/button'
 
 interface AnalysisItem {
   id: string

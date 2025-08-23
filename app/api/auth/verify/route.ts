@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { verifyAccessToken } from '@/lib/auth-utils'
-import { userService } from '@/lib/database-service'
+import { verifyAccessToken } from '../../../../lib/auth-utils'
+
+// Force dynamic rendering since this route needs to access request headers
+export const dynamic = 'force-dynamic'
+import { userService } from '../../../../lib/database-service'
 import { 
   successResponse, 
   errorResponse, 
@@ -8,7 +11,7 @@ import {
   logResponse, 
   generateRequestId,
   corsHeaders
-} from '@/lib/api-utils'
+} from '../../../../lib/api-utils'
 
 export async function GET(request: NextRequest) {
   const requestId = generateRequestId()

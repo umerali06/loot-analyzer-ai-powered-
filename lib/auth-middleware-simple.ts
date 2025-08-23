@@ -9,7 +9,7 @@ import {
   extractTokenFromHeader, 
   validateTokenFormat
 } from './auth-utils'
-import { TokenPayload } from '@/types/auth'
+import { TokenPayload } from '../types/auth'
 import { userSessionService } from './database-service'
 
 // Middleware configuration
@@ -69,7 +69,7 @@ export function withAuth(
     const finalConfig: AuthMiddlewareConfig = { ...defaultConfig, ...config }
     
     try {
-      console.log('🔐 Auth middleware called for:', request.url)
+      console.log('🔐 Auth middleware called for:', request.method, request.nextUrl?.pathname || 'unknown path')
       
       // Get authorization header
       const authHeader = request.headers.get('authorization')

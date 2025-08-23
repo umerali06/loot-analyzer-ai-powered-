@@ -1,7 +1,10 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { withAuth } from '@/lib/auth-middleware-simple'
-import { createSuccessResponse, createErrorResponse, addPerformanceHeaders } from '@/lib/api-utils-enhanced'
-import { getDatabase } from '@/lib/database'
+import { withAuth } from '../../../../lib/auth-middleware-simple'
+
+// Force dynamic rendering since this route uses auth middleware
+export const dynamic = 'force-dynamic'
+import { createSuccessResponse, createErrorResponse, addPerformanceHeaders } from '../../../../lib/api-utils-enhanced'
+import { getDatabase } from '../../../../lib/database'
 
 // Get ObjectId from mongodb like database.ts does
 const { ObjectId } = require('mongodb')

@@ -1,6 +1,6 @@
 import { AIVisionService } from './ai-vision'
 import { EbayService } from './ebay-service'
-import { Item, ItemAnalysis, LotAnalysis, AnalysisRequest, EbayData } from '@/types'
+import { Item, ItemAnalysis, LotAnalysis, AnalysisRequest, EbayData } from '../types'
 import { 
   calculatePriceStatistics as calculateStats, 
   filterOutliersSmart, 
