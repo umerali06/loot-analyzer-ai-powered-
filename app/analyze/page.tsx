@@ -1,5 +1,8 @@
 'use client'
 
+// Force dynamic rendering
+export const dynamic = 'force-dynamic'
+
 import React, { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../../contexts/AuthContext'
 import ProtectedRoute from '../../components/auth/ProtectedRoute'
