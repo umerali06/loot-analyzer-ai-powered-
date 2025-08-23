@@ -1,34 +1,21 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Recommended for Vercel – minimal tracing
-  output: 'standalone',
-
   experimental: {
     esmExternals: false,
     forceSwcTransforms: false,
   },
 
-  // Keep minification enabled (disabling can cause slower builds)
+  // Enable SWC-based minification for smaller & faster builds
   swcMinify: true,
 
-  webpack: (config) => {
-    // Prevent micromatch recursion crash during build traces
-    config.externals = [
-      ...(config.externals || []),
-      ({ request }, callback) => {
-        if (request?.includes('micromatch')) {
-          return callback(null, 'commonjs ' + request)
-        }
-        callback()
-      },
-    ]
-
-    return config
-  },
-
-  compress: true,
-  poweredByHeader: false,
+  // React best practices
   reactStrictMode: true,
+
+  // Enable compression for faster responses
+  compress: true,
+
+  // Remove "x-powered-by: Next.js" header for security
+  poweredByHeader: false,
 }
 
 module.exports = nextConfig
