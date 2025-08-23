@@ -1,25 +1,43 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Minimal configuration
+  // Completely disable build traces to prevent call stack overflow
   experimental: {
     esmExternals: false,
     forceSwcTransforms: false,
+    // Disable build traces collection
+    buildTraces: false,
   },
 
-  // Disable minification to prevent errors
+  // Disable minification
   swcMinify: false,
 
-  // Basic webpack config
+  // Disable all webpack optimizations
   webpack: (config) => {
-    // Minimal optimizations only
-    config.optimization.minimize = false
+    // Disable all optimizations that might cause issues
+    config.optimization = {
+      ...config.optimization,
+      minimize: false,
+      usedExports: false,
+      sideEffects: false,
+      splitChunks: false,
+      concatenateModules: false,
+    }
+    
+    // Disable build traces
+    config.plugins = config.plugins.filter(plugin => 
+      plugin.constructor.name !== 'BuildTracesPlugin'
+    )
+    
     return config
   },
 
-  // Basic settings
+  // Disable all other optimizations
   compress: false,
   poweredByHeader: false,
   reactStrictMode: false,
+  
+  // Force development mode to prevent build traces
+  mode: 'development',
 }
 
 module.exports = nextConfig
