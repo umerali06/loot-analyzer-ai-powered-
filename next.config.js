@@ -1,12 +1,10 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Performance optimizations
+  // Simplified configuration to avoid build trace issues
   experimental: {
-    // Enable modern JavaScript features
-    esmExternals: true,
-    // Optimize package imports
-    optimizePackageImports: ['lucide-react', '@radix-ui/react-icons'],
-    // Enable server components
+    // Disable problematic optimizations temporarily
+    esmExternals: false,
+    optimizePackageImports: [],
     serverComponentsExternalPackages: ['sharp'],
   },
 
@@ -20,55 +18,21 @@ const nextConfig = {
     contentSecurityPolicy: "default-src 'self'; script-src 'none'; sandbox;",
   },
 
-  // Compression and caching
+  // Basic optimizations
   compress: true,
   poweredByHeader: false,
   generateEtags: true,
 
-  // Bundle optimization
+  // Simplified webpack config
   webpack: (config, { dev, isServer }) => {
-    // Production optimizations
+    // Basic production optimizations only
     if (!dev) {
-      // Enable tree shaking
       config.optimization.usedExports = true
-      config.optimization.sideEffects = false
-      
-      // Optimize bundle splitting
-      config.optimization.splitChunks = {
-        chunks: 'all',
-        cacheGroups: {
-          vendor: {
-            test: /[\\/]node_modules[\\/]/,
-            name: 'vendors',
-            chunks: 'all',
-            priority: 10,
-          },
-          common: {
-            name: 'common',
-            minChunks: 2,
-            chunks: 'all',
-            priority: 5,
-          },
-        },
-      }
     }
-
-    // Optimize for specific packages
-    config.resolve.alias = {
-      ...config.resolve.alias,
-      // Optimize moment.js (if used)
-      moment: 'moment/moment.js',
-    }
-
-    // Enable source maps in development
-    if (dev) {
-      config.devtool = 'eval-source-map'
-    }
-
     return config
   },
 
-  // Headers for performance
+  // Headers for security
   async headers() {
     return [
       {
@@ -86,34 +50,12 @@ const nextConfig = {
             key: 'X-XSS-Protection',
             value: '1; mode=block',
           },
-          {
-            key: 'Referrer-Policy',
-            value: 'strict-origin-when-cross-origin',
-          },
-        ],
-      },
-      {
-        source: '/api/(.*)',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=300, stale-while-revalidate=600',
-          },
-        ],
-      },
-      {
-        source: '/_next/static/(.*)',
-        headers: [
-          {
-            key: 'Cache-Control',
-            value: 'public, max-age=31536000, immutable',
-          },
         ],
       },
     ]
   },
 
-  // Redirects for performance
+  // Redirects
   async redirects() {
     return [
       {
@@ -124,27 +66,19 @@ const nextConfig = {
     ]
   },
 
-  // Environment variables (only expose necessary vars to client-side)
-  env: {
-    // Add only client-side environment variables here if needed
-    // Example: NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
-  },
-
   // Enable SWC minification
   swcMinify: true,
 
   // Optimize CSS
   optimizeFonts: true,
 
-  // Enable React strict mode for better performance
+  // Enable React strict mode
   reactStrictMode: true,
 
-  // Enable TypeScript checking
+  // TypeScript and ESLint
   typescript: {
     ignoreBuildErrors: false,
   },
-
-  // Enable ESLint
   eslint: {
     ignoreDuringBuilds: false,
   },
