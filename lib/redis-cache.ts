@@ -13,7 +13,6 @@ export interface CacheConfig {
   maxRetriesPerRequest?: number
   retryDelayOnFailover?: number
   enableReadyCheck?: boolean
-  maxRetriesPerRequest?: number
   lazyConnect?: boolean
 }
 
@@ -34,10 +33,10 @@ export interface CacheStats {
 }
 
 export class RedisCacheService {
-  private client: RedisClientType | null = null
+  private client: any = null
   private config: CacheConfig
   private stats: CacheStats
-  private connectionPool: RedisClientType[] = []
+  private connectionPool: any[] = []
   private maxPoolSize = 5
   private isConnecting = false
 
@@ -74,20 +73,11 @@ export class RedisCacheService {
           }
         },
         password: this.config.password,
-        database: this.config.db || 0,
-        retry_strategy: (options) => {
-          if (options.total_retry_time > 1000 * 60 * 60) {
-            return new Error('Retry time exhausted')
-          }
-          if (options.attempt > 10) {
-            return undefined
-          }
-          return Math.min(options.attempt * 100, 3000)
-        }
+        database: this.config.db || 0
       })
 
       // Set up event handlers
-      this.client.on('error', (err) => {
+      this.client.on('error', (err: any) => {
         console.error('Redis Client Error:', err)
         this.stats.lastError = err.message
         this.stats.connected = false
@@ -326,7 +316,7 @@ export class RedisCacheService {
       const fullKeys = keys.map(key => this.buildKey(key, options.prefix))
       const values = await this.client.mGet(fullKeys)
 
-      return values.map(value => {
+      return values.map((value: any) => {
         if (value === null) {
           this.stats.misses++
           return null

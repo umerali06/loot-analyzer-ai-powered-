@@ -148,7 +148,7 @@ export class MonitoringSystem {
       })
 
     } catch (error) {
-      this.logger.error('Failed to collect system metrics', error)
+      this.logger.error('Failed to collect system metrics', error instanceof Error ? error : new Error(String(error)))
     }
   }
 
@@ -193,9 +193,9 @@ export class MonitoringSystem {
    * Record error metrics
    */
   recordError(error: BaseError | Error, context?: Record<string, any>): void {
-    const errorCode = 'error' in error ? error.code : 'UNKNOWN_ERROR'
-    const errorCategory = 'category' in error ? error.category : 'unknown'
-    const errorSeverity = 'severity' in error ? error.severity : 'medium'
+    const errorCode = (error as any).code || 'UNKNOWN_ERROR'
+    const errorCategory = (error as any).category || 'unknown'
+    const errorSeverity = (error as any).severity || 'medium'
 
     this.recordMetric('error_count', 1, {
       code: errorCode,
@@ -247,7 +247,7 @@ export class MonitoringSystem {
       }
 
     } catch (error) {
-      this.logger.error('Failed to analyze metrics', error)
+      this.logger.error('Failed to analyze metrics', error instanceof Error ? error : new Error(String(error)))
     }
   }
 
@@ -340,7 +340,7 @@ export class MonitoringSystem {
             break
         }
       } catch (error) {
-        this.logger.error(`Failed to send alert to ${channel.type}`, error)
+        this.logger.error(`Failed to send alert to ${channel.type}`, error instanceof Error ? error : new Error(String(error)))
       }
     }
   }
@@ -429,7 +429,7 @@ export class MonitoringSystem {
         }
 
         this.healthChecks.set(endpoint, result)
-        this.logger.error('Health check error', { result, error })
+        this.logger.error('Health check error', error instanceof Error ? error : new Error(String(error)))
       }
     }
   }

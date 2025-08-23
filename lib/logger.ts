@@ -464,7 +464,7 @@ export function logPerformance(operation: string) {
         perfLogger.finish()
         return result
       } catch (error) {
-        perfLogger.error(error)
+        perfLogger.error(error instanceof Error ? error : new Error(String(error)))
         throw error
       }
     }
@@ -486,7 +486,7 @@ export function logErrors(category?: string) {
         const result = await originalMethod.apply(this, args)
         return result
       } catch (error) {
-        logger.error('Method execution failed', error, {
+        logger.error('Method execution failed', error instanceof Error ? error : new Error(String(error)), {
           method: propertyKey,
           args: args.map(arg => typeof arg === 'object' ? '[Object]' : String(arg))
         })

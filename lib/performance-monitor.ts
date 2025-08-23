@@ -95,7 +95,7 @@ export const DEFAULT_MONITORING_CONFIG: MonitoringConfig = {
       dsn: process.env.SENTRY_DSN,
       environment: process.env.NODE_ENV || 'development'
     } : undefined,
-    datadog: process.env.DATADOG_API_KEY ? {
+    datadog: (process.env.DATADOG_API_KEY && process.env.DATADOG_APP_KEY) ? {
       apiKey: process.env.DATADOG_API_KEY,
       appKey: process.env.DATADOG_APP_KEY,
       site: process.env.DATADOG_SITE || 'datadoghq.com'
@@ -488,7 +488,7 @@ export class PerformanceMonitor extends EventEmitter {
     }
 
     // Email notification
-    if (this.config.alerting.emailRecipients.length > 0) {
+    if (this.config.alerting.emailRecipients && this.config.alerting.emailRecipients.length > 0) {
       this.sendEmailNotification(alert)
     }
 
@@ -517,7 +517,7 @@ export class PerformanceMonitor extends EventEmitter {
   private async sendEmailNotification(alert: Alert): Promise<void> {
     // In a real implementation, you would integrate with an email service
     // like SendGrid, AWS SES, or similar
-    console.log(`Email alert would be sent to: ${this.config.alerting.emailRecipients.join(', ')}`)
+    console.log(`Email alert would be sent to: ${this.config.alerting.emailRecipients?.join(', ') || 'No recipients'}`)
     console.log(`Subject: [${alert.severity.toUpperCase()}] ${alert.message}`)
   }
 

@@ -158,7 +158,7 @@ export class ComponentOptimizer {
   /**
    * Memoize expensive computations
    */
-  private static memoCache = new Map<string, { value: any; timestamp: number }>()
+  static memoCache = new Map<string, { value: any; timestamp: number }>()
 
   static memoize<T>(key: string, computeFn: () => T, ttl: number = CACHE_TTL.SHORT): T {
     const cached = this.memoCache.get(key)

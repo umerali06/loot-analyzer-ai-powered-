@@ -6,8 +6,7 @@ import { AIVisionService } from '@/lib/ai-vision'
 import { EbayService } from '@/lib/ebay-service'
 import { analysisService } from '@/lib/database-service'
 
-// Get ObjectId from global scope
-const { ObjectId } = require('mongodb')
+import { ObjectId } from 'mongodb'
 
 // Determine item category based on name with enhanced logic
 function determineCategory(itemName: string): string {
@@ -349,6 +348,8 @@ async function getEnhancedEbayData(itemName: string, item: any): Promise<{
   trend?: string;
   searchQuery?: string;
   lastUpdated?: string;
+  marketValue?: number;
+  soldCount?: number;
 }> {
   try {
     console.log(`🛒 Getting enhanced eBay data for: ${itemName}`)
@@ -432,6 +433,8 @@ async function tryCategorySpecificSearch(ebayService: EbayService, itemName: str
   activeCount: number;
   soldItems: number[];
   trend: string;
+  marketValue: number;
+  soldCount: number;
 } | null> {
   try {
     const categoryTerms = getCategorySearchTerms(category)
@@ -449,7 +452,9 @@ async function tryCategorySpecificSearch(ebayService: EbayService, itemName: str
           return {
             activeCount: result.activeCount,
             soldItems: result.statistics.soldPrices.slice(0, 5),
-            trend: 'stable'
+            trend: 'stable',
+            marketValue: result.marketValue || 0,
+            soldCount: result.soldCount || 0
           }
         }
       } catch (error) {
@@ -486,6 +491,8 @@ async function trySimplifiedSearch(ebayService: EbayService, itemName: string): 
   activeCount: number;
   soldItems: number[];
   trend: string;
+  marketValue: number;
+  soldCount: number;
 } | null> {
   try {
     // Extract key words from item name
@@ -501,11 +508,13 @@ async function trySimplifiedSearch(ebayService: EbayService, itemName: string): 
       )
     ]) as any
     
-    if (result && result.activeCount > 0) {
+         if (result && result.activeCount > 0) {
        return {
         activeCount: result.activeCount,
         soldItems: result.statistics.soldPrices.slice(0, 3),
-         trend: 'stable'
+         trend: 'stable',
+         marketValue: result.marketValue || 0,
+         soldCount: result.soldCount || 0
        }
      }
   } catch (error) {
@@ -528,7 +537,8 @@ function generateIntelligentMarketData(itemName: string, category: string): any 
     activeCount: activeListings,
     soldItems: soldPrices,
     trend: getMarketTrend(category),
-    estimatedMarketValue: estimatedPrice
+    marketValue: estimatedPrice,
+    soldCount: soldPrices.length
   }
 }
 
@@ -773,7 +783,7 @@ async function handler(req: NextRequest): Promise<NextResponse> {
             const lowestValue = values.length > 0 ? Math.min(...values) : 0
             
             const analysisData = {
-              userId: userId,
+              userId: new ObjectId(userId),
               title: `Analysis of ${images.length} image${images.length > 1 ? 's' : ''}`,
               description: `AI analysis completed at ${new Date().toLocaleString()}`,
               status: 'completed' as const,
@@ -1118,7 +1128,7 @@ async function handlePartialResults(allItems: any[], images: any[], startTime: n
     const lowestValue = values.length > 0 ? Math.min(...values) : 0
     
     const analysisData = {
-      userId: userId,
+      userId: new ObjectId(userId),
       title: `Partial Analysis of ${images.length} image${images.length > 1 ? 's' : ''}`,
       description: `Partial AI analysis completed at ${new Date().toLocaleString()} (timed out)`,
       status: 'completed' as const,

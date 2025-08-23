@@ -3,7 +3,7 @@
  * Clean, simplified types for users, sessions, and analysis storage
  */
 
-const { ObjectId } = require('mongodb')
+import { ObjectId } from 'mongodb'
 
 // User Management
 export interface User {

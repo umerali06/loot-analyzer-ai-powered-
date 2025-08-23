@@ -487,7 +487,7 @@ export class PerformanceBenchmark {
     await new Promise(resolve => setTimeout(resolve, duration))
     
     // Record cache metric
-    recordCacheMetric('get', 'test_key', duration)
+    recordCacheMetric('hit', 'test_key', duration)
   }
 
   private async executeImageTest(test: BenchmarkTest): Promise<void> {
@@ -597,17 +597,17 @@ export class PerformanceBenchmark {
 
   private recordBenchmarkMetrics(test: BenchmarkTest, result: BenchmarkResult): void {
     // Record various performance metrics
-    performanceMonitor.recordMetric('benchmark', 'test_duration', result.duration, 'ms', {
+    performanceMonitor.recordMetric('system', 'test_duration', result.duration, 'ms', {
       testId: test.id,
       category: test.category
     })
 
-    performanceMonitor.recordMetric('benchmark', 'throughput', result.throughput, 'ops/sec', {
+    performanceMonitor.recordMetric('system', 'throughput', result.throughput, 'ops/sec', {
       testId: test.id,
       category: test.category
     })
 
-    performanceMonitor.recordMetric('benchmark', 'memory_usage', 
+    performanceMonitor.recordMetric('system', 'memory_usage', 
       result.memoryUsage.peak.heapUsed, 'bytes', {
       testId: test.id,
       category: test.category
@@ -616,22 +616,22 @@ export class PerformanceBenchmark {
 
   private recordLoadTestMetrics(endpoint: string, method: string, result: LoadTestResult): void {
     // Record load test metrics
-    performanceMonitor.recordMetric('load_test', 'total_requests', result.totalRequests, 'count', {
+    performanceMonitor.recordMetric('api', 'total_requests', result.totalRequests, 'count', {
       endpoint,
       method
     })
 
-    performanceMonitor.recordMetric('load_test', 'requests_per_second', result.requestsPerSecond, 'rps', {
+    performanceMonitor.recordMetric('api', 'requests_per_second', result.requestsPerSecond, 'rps', {
       endpoint,
       method
     })
 
-    performanceMonitor.recordMetric('load_test', 'error_rate', result.errorRate, 'percentage', {
+    performanceMonitor.recordMetric('api', 'error_rate', result.errorRate, 'percentage', {
       endpoint,
       method
     })
 
-    performanceMonitor.recordMetric('load_test', 'average_response_time', result.averageResponseTime, 'ms', {
+    performanceMonitor.recordMetric('api', 'average_response_time', result.averageResponseTime, 'ms', {
       endpoint,
       method
     })

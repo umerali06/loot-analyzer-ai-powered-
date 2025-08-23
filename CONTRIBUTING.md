@@ -95,3 +95,4 @@ Please include:
 Contributors will be added to the CONTRIBUTORS.md file and acknowledged in release notes.
 
 Thank you for helping make SIBI Lot Analyzer better!
+
