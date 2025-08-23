@@ -1,5 +1,9 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  // Disable file tracing globally to prevent call stack overflow
+  outputFileTracing: false,
+  outputFileTracingRoot: undefined,
+  
   // Disable static analysis during builds
   eslint: {
     ignoreDuringBuilds: true,
@@ -13,7 +17,6 @@ const nextConfig = {
   
   // Disable all static optimizations
   experimental: {
-    outputFileTracing: false,
     forceSwcTransforms: false,
     esmExternals: false,
   },
