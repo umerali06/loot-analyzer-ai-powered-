@@ -1,43 +1,34 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
-  // Completely disable build traces to prevent call stack overflow
+  // Recommended for Vercel – minimal tracing
+  output: 'standalone',
+
   experimental: {
     esmExternals: false,
     forceSwcTransforms: false,
-    // Disable build traces collection
-    buildTraces: false,
   },
 
-  // Disable minification
-  swcMinify: false,
+  // Keep minification enabled (disabling can cause slower builds)
+  swcMinify: true,
 
-  // Disable all webpack optimizations
   webpack: (config) => {
-    // Disable all optimizations that might cause issues
-    config.optimization = {
-      ...config.optimization,
-      minimize: false,
-      usedExports: false,
-      sideEffects: false,
-      splitChunks: false,
-      concatenateModules: false,
-    }
-    
-    // Disable build traces
-    config.plugins = config.plugins.filter(plugin => 
-      plugin.constructor.name !== 'BuildTracesPlugin'
-    )
-    
+    // Prevent micromatch recursion crash during build traces
+    config.externals = [
+      ...(config.externals || []),
+      ({ request }, callback) => {
+        if (request?.includes('micromatch')) {
+          return callback(null, 'commonjs ' + request)
+        }
+        callback()
+      },
+    ]
+
     return config
   },
 
-  // Disable all other optimizations
-  compress: false,
+  compress: true,
   poweredByHeader: false,
-  reactStrictMode: false,
-  
-  // Force development mode to prevent build traces
-  mode: 'development',
+  reactStrictMode: true,
 }
 
 module.exports = nextConfig
