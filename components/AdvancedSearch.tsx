@@ -2,7 +2,7 @@
 
 import React, { useState, useEffect, useRef, useCallback } from 'react'
 import { Search, X, Filter, TrendingUp, Clock, DollarSign, Tag, Sparkles } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '../contexts/AuthContext'
 import { useRouter } from 'next/navigation'
 
 interface SearchResult {

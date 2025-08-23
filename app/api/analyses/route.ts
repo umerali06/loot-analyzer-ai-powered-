@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { withAuth } from '@/lib/auth-middleware-simple'
-import { createSuccessResponse, createErrorResponse } from '@/lib/api-utils-enhanced'
-import { analysisService } from '@/lib/database-service'
+import { withAuth } from '../../../lib/auth-middleware-simple'
+import { createSuccessResponse, createErrorResponse } from '../../../lib/api-utils-enhanced'
+import { analysisService } from '../../../lib/database-service'
 
 async function handler(req: NextRequest): Promise<NextResponse> {
   try {

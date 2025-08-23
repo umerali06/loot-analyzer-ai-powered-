@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react'
 import { Eye, EyeOff, Mail, Lock, User, AlertCircle, CheckCircle, X } from 'lucide-react'
-import { useAuth } from '@/contexts/AuthContext'
+import { useAuth } from '../../contexts/AuthContext'
 import { validateEmail, validateUsername, validatePassword, generateSecurePassword } from '@/lib/auth-utils'
 import { PasswordValidation } from '@/types/auth'
 import PasswordStrengthIndicator from './PasswordStrengthIndicator'
