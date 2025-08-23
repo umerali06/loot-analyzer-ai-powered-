@@ -835,18 +835,17 @@ async function handler(req: NextRequest): Promise<NextResponse> {
             
             // Update the result with the database ID if available
             if (savedAnalysis.success && savedAnalysis.data && savedAnalysis.data._id) {
-              const dbId = savedAnalysis.data._id.toString()
-              ;(finalResult as any)._id = dbId
-              ;(finalResult as any).databaseId = dbId
+              const dbId: string = savedAnalysis.data._id + "";
+              (finalResult as any)._id = dbId;
+              (finalResult as any).databaseId = dbId;
               console.log('✅ Final result updated with database ID:', dbId)
             } else {
               console.log('⚠️ No database ID available from saved analysis')
             }
             
           } catch (dbError) {
-            console.log('❌ Failed to save analysis to database:', dbError)
             // Don't fail the analysis, but log the error
-            ;(finalResult as any).databaseError = 'Failed to save to database'
+            (finalResult as any).databaseError = 'Failed to save to database'
           }
           
           return finalResult
@@ -1180,18 +1179,18 @@ async function handlePartialResults(allItems: any[], images: any[], startTime: n
     
     // Update the result with the database ID if available
     if (savedAnalysis.success && savedAnalysis.data && savedAnalysis.data._id) {
-      const dbId = savedAnalysis.data._id.toString()
-      ;(partialResult as any)._id = dbId
-      ;(partialResult as any).databaseId = dbId
+      const dbId: string = savedAnalysis.data._id + "";
+      (partialResult as any)._id = dbId;
+      (partialResult as any).databaseId = dbId;
       console.log('✅ Partial result updated with database ID:', dbId)
     } else {
       console.log('⚠️ No database ID available from saved partial analysis')
     }
     
   } catch (dbError) {
-    console.log('❌ Failed to save partial analysis to database:', dbError)
+
     // Don't fail the analysis, but log the error
-    ;(partialResult as any).databaseError = 'Failed to save to database'
+    (partialResult as any).databaseError = 'Failed to save to database'
   }
   
   const response = createSuccessResponse(partialResult)
