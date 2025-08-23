@@ -2,29 +2,24 @@
 const nextConfig = {
   // Minimal configuration to prevent build issues
   experimental: {
-    // Disable experimental features
+    // Disable all experimental features
     esmExternals: false,
     forceSwcTransforms: false,
   },
 
-  // Basic image optimization
-  images: {
-    formats: ['image/webp', 'image/avif'],
-    deviceSizes: [640, 750, 828, 1080, 1200, 1920, 2048, 3840],
-    imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
-    dangerouslyAllowSVG: true,
-  },
-
-  // Disable minification completely to avoid build errors
+  // Disable minification completely
   swcMinify: false,
 
-  // Disable webpack optimizations
+  // Disable all webpack optimizations
   webpack: (config) => {
     config.optimization.minimize = false
+    config.optimization.usedExports = false
+    config.optimization.sideEffects = false
+    config.optimization.splitChunks = false
     return config
   },
 
-  // Basic optimizations
+  // Disable all optimizations
   compress: false,
   poweredByHeader: false,
   reactStrictMode: true,
