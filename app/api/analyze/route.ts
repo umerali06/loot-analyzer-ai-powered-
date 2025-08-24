@@ -3,7 +3,7 @@ import { withAuth } from '../../../lib/auth-middleware-simple'
 import { enhancedAPI, createSuccessResponse, createErrorResponse, addPerformanceHeaders } from '../../../lib/api-utils-enhanced'
 import { getCachedData } from '../../../lib/api-utils-enhanced'
 import { AIVisionService } from '../../../lib/ai-vision'
-import { EbayService } from '../../../lib/ebay-service'
+import { EnhancedEbayService } from '../../../lib/enhanced-ebay-service'
 import { analysisService } from '../../../lib/database-service'
 
 import { ObjectId } from 'mongodb'
@@ -342,7 +342,7 @@ function getRandomCondition(): string {
 }
 
 // Enhanced eBay integration with multiple fallback strategies
-async function getEnhancedEbayData(itemName: string, item: any): Promise<{
+async function getEnhancedEbayData(itemName: string, item: any, requestOptions?: any): Promise<{
   activeCount: number;
   soldItems?: any[];
   trend?: string;
@@ -354,14 +354,20 @@ async function getEnhancedEbayData(itemName: string, item: any): Promise<{
   try {
     console.log(`🛒 Getting enhanced eBay data for: ${itemName}`)
     
-    const ebayService = new EbayService(process.env.EBAY_API_KEY || '')
+    const ebayService = new EnhancedEbayService(process.env.EBAY_API_KEY || '')
     
     // Optimized eBay search with AI-enhanced search terms (reduced timeout for speed)
     const searchTerm = item.title || item.ebaySearchTerms?.[0] || itemName
     console.log(`🔍 Using optimized search term: "${searchTerm}" for item: ${itemName}`)
     
+    // Prepare eBay search options
+    const ebayOptions = {
+      soldWindowDays: requestOptions?.soldWindowDays || 30,
+      categoryHint: requestOptions?.categoryHint || item.category
+    }
+    
     const primaryResult = await Promise.race([
-      ebayService.getItemEbayData(searchTerm, item),
+      ebayService.getItemEbayData(searchTerm, item, ebayOptions),
       new Promise((_, reject) => 
         setTimeout(() => reject(new Error('eBay primary search timeout')), 10000) // Reduced to 10 seconds
       )
@@ -397,7 +403,7 @@ async function getEnhancedEbayData(itemName: string, item: any): Promise<{
     
     // Fallback 1: Try with category-specific search
     console.log(`🔄 Primary search failed, trying category-specific search...`)
-    const categoryResult = await tryCategorySpecificSearch(ebayService, itemName, item.category)
+    const categoryResult = await tryCategorySpecificSearch(ebayService, itemName, item.category, requestOptions)
     if (categoryResult) {
       console.log(`✅ Category-specific search successful`)
       return categoryResult
@@ -405,7 +411,7 @@ async function getEnhancedEbayData(itemName: string, item: any): Promise<{
     
     // Fallback 2: Try with simplified search terms
     console.log(`🔄 Category search failed, trying simplified terms...`)
-    const simplifiedResult = await trySimplifiedSearch(ebayService, itemName)
+    const simplifiedResult = await trySimplifiedSearch(ebayService, itemName, requestOptions)
     if (simplifiedResult) {
       console.log(`✅ Simplified search successful`)
       return simplifiedResult
@@ -413,7 +419,7 @@ async function getEnhancedEbayData(itemName: string, item: any): Promise<{
     
     // Fallback 3: Generate intelligent market data
     console.log(`🔄 All eBay searches failed, generating intelligent market data...`)
-    const intelligentData = generateIntelligentMarketData(itemName, item.category)
+    const intelligentData = generateIntelligentMarketData(itemName, item.category, requestOptions)
     console.log(`✅ Generated intelligent market data`)
     return intelligentData
     
@@ -422,14 +428,14 @@ async function getEnhancedEbayData(itemName: string, item: any): Promise<{
     
     // Final fallback: Generate market data based on category knowledge
     console.log(`🔄 Using final fallback: category-based market data`)
-    const fallbackData = generateIntelligentMarketData(itemName, item.category)
+    const fallbackData = generateIntelligentMarketData(itemName, item.category, requestOptions)
     console.log(`✅ Generated fallback market data`)
     return fallbackData
   }
 }
 
 // Category-specific search strategies
-async function tryCategorySpecificSearch(ebayService: EbayService, itemName: string, category: string): Promise<{
+async function tryCategorySpecificSearch(ebayService: EnhancedEbayService, itemName: string, category: string, requestOptions?: any): Promise<{
   activeCount: number;
   soldItems: number[];
   trend: string;
@@ -439,10 +445,16 @@ async function tryCategorySpecificSearch(ebayService: EbayService, itemName: str
   try {
     const categoryTerms = getCategorySearchTerms(category)
     
+    // Prepare eBay search options
+    const ebayOptions = {
+      soldWindowDays: requestOptions?.soldWindowDays || 30,
+      categoryHint: requestOptions?.categoryHint || category
+    }
+    
     for (const term of categoryTerms) {
       try {
         const result = await Promise.race([
-          ebayService.getItemEbayData(`${term} ${itemName}`),
+          ebayService.getItemEbayData(`${term} ${itemName}`, null, ebayOptions),
           new Promise((_, reject) => 
             setTimeout(() => reject(new Error('Category search timeout')), 10000) // 10 seconds
           )
@@ -487,7 +499,7 @@ function getCategorySearchTerms(category: string): string[] {
 }
 
 // Simplified search with basic terms
-async function trySimplifiedSearch(ebayService: EbayService, itemName: string): Promise<{
+async function trySimplifiedSearch(ebayService: EnhancedEbayService, itemName: string, requestOptions?: any): Promise<{
   activeCount: number;
   soldItems: number[];
   trend: string;
@@ -501,8 +513,14 @@ async function trySimplifiedSearch(ebayService: EbayService, itemName: string): 
     
     if (searchQuery.length < 3) return null
     
+    // Prepare eBay search options
+    const ebayOptions = {
+      soldWindowDays: requestOptions?.soldWindowDays || 30,
+      categoryHint: requestOptions?.categoryHint || 'Other'
+    }
+
     const result = await Promise.race([
-      ebayService.getItemEbayData(searchQuery),
+      ebayService.getItemEbayData(searchQuery, null, ebayOptions),
       new Promise((_, reject) => 
         setTimeout(() => reject(new Error('Simplified search timeout')), 10000) // 10 seconds
       )
@@ -525,7 +543,7 @@ async function trySimplifiedSearch(ebayService: EbayService, itemName: string): 
 }
 
 // Generate intelligent market data when eBay fails
-function generateIntelligentMarketData(itemName: string, category: string): any {
+function generateIntelligentMarketData(itemName: string, category: string, requestOptions?: any): any {
   const baseValue = getBaseValueForCategory(category)
   const marketMultiplier = getMarketMultiplier(category)
   
@@ -592,7 +610,7 @@ async function handler(req: NextRequest): Promise<NextResponse> {
   try {
     if (req.method === 'POST') {
       const body = await req.json()
-      const { images } = body
+      const { images, options } = body
       const userId = req.headers.get('x-user-id')
 
       if (!images || !Array.isArray(images) || images.length === 0) {
@@ -604,10 +622,12 @@ async function handler(req: NextRequest): Promise<NextResponse> {
       }
 
       console.log('🚀 Starting enhanced analysis for', images.length, 'images...')
+      console.log('⚙️ Analysis options:', options || 'default')
       
       const startTime = Date.now()
       const allItems: any[] = []
       const analysisResults: any[] = []
+      const requestOptions = options || {}
       
       // Enhanced overall timeout with progress tracking
       const overallTimeout = new Promise((_, reject) => 
@@ -655,7 +675,7 @@ async function handler(req: NextRequest): Promise<NextResponse> {
                     console.log(`🔄 Processing item: ${item.name} (${item.category})`)
                     
                     // Enhanced eBay data retrieval with multiple fallbacks
-                    const ebayData = await getEnhancedEbayData(item.name, item)
+                    const ebayData = await getEnhancedEbayData(item.name, item, requestOptions)
                     
                     console.log(`📈 eBay data for "${item.name}":`, {
                       activeListings: ebayData?.activeCount || 0,
@@ -769,7 +789,31 @@ async function handler(req: NextRequest): Promise<NextResponse> {
               successfulItems: allItems.filter(item => item.confidence > 0.1).length,
               failedItems: allItems.filter(item => item.confidence <= 0.1).length,
               aiConfidence: avgConfidence
-            }
+            },
+            // Add debug information when requested
+            ...(requestOptions.debug && {
+              debug: {
+                analysisOptions: requestOptions,
+                searchQueries: allItems.map(item => ({
+                  itemName: item.name,
+                  category: item.category,
+                  searchTerms: item.marketData?.searchQuery || 'N/A'
+                })),
+                outlierMethods: allItems.map(item => ({
+                  itemName: item.name,
+                  outlierMethod: item.marketData?.outlierMethod || 'N/A',
+                  outlierCount: item.marketData?.outlierCount || 0,
+                  confidence: item.marketData?.confidence || 0
+                })),
+                soldWindowDays: requestOptions.soldWindowDays || 30,
+                processingDetails: {
+                  totalImages: images.length,
+                  successfulImages: analysisResults.filter(r => r.status === 'completed').length,
+                  failedImages: analysisResults.filter(r => r.status === 'failed').length,
+                  averageProcessingTime: processingTime / images.length
+                }
+              }
+            })
           }
           
           // Save complete analysis results to database

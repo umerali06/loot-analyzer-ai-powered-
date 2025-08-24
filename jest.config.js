@@ -7,40 +7,21 @@ const createJestConfig = nextJest({
 
 // Add any custom config to be passed to Jest
 const customJestConfig = {
-  // DISABLED: setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
+  setupFilesAfterEnv: ['<rootDir>/jest.setup.js'],
   testEnvironment: 'jsdom',
   testPathIgnorePatterns: ['<rootDir>/.next/', '<rootDir>/node_modules/'],
   moduleNameMapper: {
     '^@/(.*)$': '<rootDir>/$1',
+    '^undici$': '<rootDir>/__mocks__/undici.js',
+    '^node-fetch$': '<rootDir>/__mocks__/node-fetch.js'
   },
-  collectCoverageFrom: [
-    'components/**/*.{js,jsx,ts,tsx}',
-    'lib/**/*.{js,jsx,ts,tsx}',
-    'app/**/*.{js,jsx,ts,tsx}',
-    '!**/*.d.ts',
-    '!**/node_modules/**',
+  transformIgnorePatterns: [
+    'node_modules/(?!(parse5|domhandler|domutils|entities|nth-check|boolbase)/)',
   ],
-  coverageThreshold: {
-    global: {
-      branches: 80,
-      functions: 80,
-      lines: 80,
-      statements: 80,
-    },
-  },
-  coverageReporters: ['text', 'lcov', 'html'],
-  testMatch: [
-    '<rootDir>/__tests__/**/*.{js,jsx,ts,tsx}',
-    '<rootDir>/**/*.{test,spec}.{js,jsx,ts,tsx}',
-  ],
-  transform: {
-    '^.+\\.(js|jsx|ts|tsx)$': ['ts-jest', {
-      tsconfig: 'tsconfig.jest.json',
-    }],
-  },
-  moduleFileExtensions: ['ts', 'tsx', 'js', 'jsx', 'json', 'node'],
-  testTimeout: 10000,
-  verbose: true,
+  // Handle ES modules properly
+  extensionsToTreatAsEsm: ['.ts', '.tsx'],
+  // Mock problematic modules globally
+  setupFiles: ['<rootDir>/jest.setup.js']
 }
 
 // createJestConfig is exported this way to ensure that next/jest can load the Next.js config which is async

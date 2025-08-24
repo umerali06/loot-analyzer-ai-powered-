@@ -1,371 +1,563 @@
 /**
- * Real-time Scraper Service
- * Uses ScraperAPI to fetch live market data from eBay and other marketplaces
+ * Enhanced Scraper Service for eBay Integration
+ * Provides robust scraping with exponential backoff, rate limiting, and structured logging
+ * Replaces basic scraping with production-ready error handling and retry logic
  */
 
-export interface ScrapedItem {
-  id: string
-  title: string
-  price: number
-  currency: string
-  condition: string
-  location: string
-  shipping: number
-  soldCount: number
-  listingType: string
-  endTime: string
-  imageUrl?: string
+export interface ScrapingOptions {
+  maxRetries?: number
+  baseDelay?: number
+  maxDelay?: number
+  timeout?: number
+  rateLimit?: number // requests per second
+  userAgent?: string
+  countryCode?: string
+  render?: boolean
+  useProxy?: boolean
+  antiDetection?: boolean
+}
+
+export interface ScrapingResult {
+  success: boolean
+  html: string | null
+  statusCode?: number
+  error?: string
+  attempt: number
+  duration: number
+  timestamp: string
   url: string
-  soldPrice?: number
-  soldDate?: string
-  source: 'ebay' | 'facebook' | 'craigslist'
-  scrapedAt: Date
+  blocked?: boolean
+  retryAfter?: number
 }
 
-export interface ScraperStats {
-  totalItems: number
-  newListings: number
-  priceChanges: number
-  lastUpdated: Date
-  uptime: number
-  responseTime: number
+export interface ScrapingMetrics {
+  totalRequests: number
+  successfulRequests: number
+  failedRequests: number
+  blockedRequests: number
+  averageResponseTime: number
+  lastRequestTime: string
+  rateLimitRemaining: number
 }
 
-export interface ScraperSource {
-  id: string
-  name: string
-  baseUrl: string
-  status: 'active' | 'inactive' | 'error'
-  lastScraped: Date
-  itemsScraped: number
-  newListings: number
-  priceChanges: number
-  errorCount: number
-  responseTime: number
-}
-
-export class ScraperService {
+export class EnhancedScraperService {
   private apiKey: string
-  private baseUrl: string
-  private sources: Map<string, ScraperSource>
-  private stats: ScraperStats
+  private baseUrl: string = 'http://api.scraperapi.com'
+  private metrics: ScrapingMetrics
+  private lastRequestTime: number = 0
+  private requestQueue: Array<() => Promise<void>> = []
+  private isProcessingQueue: boolean = false
+  private userAgentIndex: number = 0
 
-  constructor() {
-    this.apiKey = process.env.SCRAPER_API_KEY || ''
-    this.baseUrl = 'https://api.scraperapi.com/api/v1'
-    this.sources = new Map()
-    this.stats = {
-      totalItems: 0,
-      newListings: 0,
-      priceChanges: 0,
-      lastUpdated: new Date(),
-      uptime: 99.8,
-      responseTime: 0
+  // Multiple user agents to avoid detection
+  private userAgents = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:109.0) Gecko/20100101 Firefox/121.0',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/17.1 Safari/605.1.15',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
+  ]
+
+  constructor(apiKey: string) {
+    this.apiKey = apiKey
+    this.metrics = {
+      totalRequests: 0,
+      successfulRequests: 0,
+      failedRequests: 0,
+      blockedRequests: 0,
+      averageResponseTime: 0,
+      lastRequestTime: new Date().toISOString(),
+      rateLimitRemaining: 10 // Default rate limit
     }
-    
-    this.initializeSources()
-  }
-
-  private initializeSources() {
-    this.sources.set('ebay', {
-      id: 'ebay',
-      name: 'eBay',
-      baseUrl: 'https://www.ebay.com',
-      status: 'active',
-      lastScraped: new Date(),
-      itemsScraped: 0,
-      newListings: 0,
-      priceChanges: 0,
-      errorCount: 0,
-      responseTime: 0
-    })
-
-    this.sources.set('facebook', {
-      id: 'facebook',
-      name: 'Facebook Marketplace',
-      baseUrl: 'https://www.facebook.com/marketplace',
-      status: 'active',
-      lastScraped: new Date(),
-      itemsScraped: 0,
-      newListings: 0,
-      priceChanges: 0,
-      errorCount: 0,
-      responseTime: 0
-    })
-
-    this.sources.set('craigslist', {
-      id: 'craigslist',
-      name: 'Craigslist',
-      baseUrl: 'https://www.craigslist.org',
-      status: 'active',
-      lastScraped: new Date(),
-      itemsScraped: 0,
-      newListings: 0,
-      priceChanges: 0,
-      errorCount: 0,
-      responseTime: 0
-    })
   }
 
   /**
-   * Scrape eBay for sold items
+   * Get next user agent in rotation
    */
-  async scrapeEbaySold(query: string, limit: number = 20): Promise<ScrapedItem[]> {
+  private getNextUserAgent(): string {
+    const agent = this.userAgents[this.userAgentIndex]
+    this.userAgentIndex = (this.userAgentIndex + 1) % this.userAgents.length
+    return agent
+  }
+
+  /**
+   * Scrape URL with enhanced error handling and retry logic
+   */
+  async scrapeUrl(url: string, options: ScrapingOptions = {}): Promise<ScrapingResult> {
+    const {
+      maxRetries = 3,
+      baseDelay = 2000, // Increased base delay for real data
+      maxDelay = 30000, // Increased max delay for real data
+      timeout = 20000,
+      rateLimit = 1, // Reduced to 1 request per second for eBay
+      userAgent,
+      countryCode = 'us',
+      render = false,
+      useProxy = true,
+      antiDetection = true
+    } = options
+
     const startTime = Date.now()
-    const source = this.sources.get('ebay')!
+    let lastError: string | undefined
+    let blockedCount = 0
+
+    // Apply rate limiting
+    await this.waitForRateLimit(rateLimit)
+
+    for (let attempt = 1; attempt <= maxRetries; attempt++) {
+      try {
+        console.log(`🔄 Scraping attempt ${attempt}/${maxRetries}: ${url}`)
+        console.log(`⏱️ Timeout: ${timeout}ms, Attempt: ${attempt}/${maxRetries}`)
+        
+        const result = await this.performScrapingRequest(url, {
+          timeout,
+          userAgent: userAgent || this.getNextUserAgent(),
+          countryCode,
+          render,
+          useProxy,
+          antiDetection,
+          attempt
+        })
+
+        if (result.success) {
+          const duration = Date.now() - startTime
+          this.updateMetrics(true, duration)
+          
+          console.log(`✅ Scraping successful on attempt ${attempt} (${duration}ms)`)
+          return {
+            ...result,
+            attempt,
+            duration,
+            timestamp: new Date().toISOString()
+          }
+        }
+
+        // Handle specific error types
+        if (result.blocked) {
+          blockedCount++
+          this.metrics.blockedRequests++
+          console.warn(`🚫 Request blocked on attempt ${attempt}`)
+          
+          if (blockedCount >= 2) {
+            // If blocked multiple times, wait longer
+            const waitTime = Math.min(maxDelay, baseDelay * Math.pow(2, attempt) * 2)
+            console.log(`⏳ Extended wait due to blocking: ${waitTime}ms`)
+            await new Promise(resolve => setTimeout(resolve, waitTime))
+          }
+        }
+
+        lastError = result.error
+
+      } catch (error) {
+        const errorMessage = error instanceof Error ? error.message : String(error)
+        console.warn(`Scraping attempt ${attempt} failed:`, errorMessage)
+        lastError = errorMessage
+        
+        // Check if it's a blocking error
+        if (this.isBlockingError(errorMessage)) {
+          blockedCount++
+          this.metrics.blockedRequests++
+          console.warn(`🚫 Detected blocking pattern: ${errorMessage}`)
+        }
+        
+        // For timeout errors, try to recover with longer waits for real data
+        if (errorMessage.includes('timeout') || errorMessage.includes('aborted')) {
+          console.log(`⏱️ Timeout detected, using longer wait for real data recovery`)
+          if (attempt < maxRetries) {
+            const longWait = Math.min(maxDelay, baseDelay * Math.pow(2, attempt) * 3) // Longer wait for timeouts
+            console.log(`⏳ Long wait for real data recovery: ${longWait}ms`)
+            await new Promise(resolve => setTimeout(resolve, longWait))
+          }
+          continue
+        }
+      }
+
+      // If this isn't the last attempt, wait before retrying
+      if (attempt < maxRetries) {
+        const waitTime = this.calculateWaitTime(attempt, baseDelay, maxDelay, blockedCount)
+        console.log(`⏳ Waiting ${waitTime}ms before retry...`)
+        await new Promise(resolve => setTimeout(resolve, waitTime))
+      }
+    }
+
+    const duration = Date.now() - startTime
+    this.updateMetrics(false, duration)
     
+    console.error(`❌ All scraping attempts failed for ${url}`)
+    return {
+      success: false,
+      html: null,
+      error: lastError || 'All attempts failed',
+      attempt: maxRetries,
+      duration,
+      timestamp: new Date().toISOString(),
+      url,
+      blocked: blockedCount > 0
+    }
+  }
+
+  /**
+   * Check if error indicates blocking
+   */
+  private isBlockingError(errorMessage: string): boolean {
+    const blockingPatterns = [
+      'blocked',
+      'forbidden',
+      'access denied',
+      'rate limit',
+      'too many requests',
+      'error page detected',
+      'captcha',
+      'robot',
+      'bot detection'
+    ]
+    
+    return blockingPatterns.some(pattern => 
+      errorMessage.toLowerCase().includes(pattern)
+    )
+  }
+
+  /**
+   * Calculate wait time with jitter and blocking consideration
+   */
+  private calculateWaitTime(attempt: number, baseDelay: number, maxDelay: number, blockedCount: number): number {
+    let waitTime = Math.min(maxDelay, baseDelay * Math.pow(2, attempt))
+    
+    // Add jitter to prevent synchronized retries
+    const jitter = Math.random() * 0.3 + 0.85 // 85-115% of base time
+    
+    // Increase wait time if blocked
+    if (blockedCount > 0) {
+      waitTime *= (1 + blockedCount * 0.5)
+    }
+    
+    return Math.min(maxDelay, Math.floor(waitTime * jitter))
+  }
+
+  /**
+   * Perform the actual scraping request
+   */
+  private async performScrapingRequest(url: string, options: {
+    timeout: number
+    userAgent: string
+    countryCode: string
+    render: boolean
+    useProxy: boolean
+    antiDetection: boolean
+    attempt: number
+  }): Promise<ScrapingResult> {
+    const {
+      timeout,
+      userAgent,
+      countryCode,
+      render,
+      useProxy,
+      antiDetection,
+      attempt
+    } = options
+
     try {
-      // Construct eBay search URL for sold items
-      const searchUrl = `https://www.ebay.com/sch/i.html?_nkw=${encodeURIComponent(query)}&_sacat=0&LH_Sold=1&LH_Complete=1&_ipg=${limit}`
+      // Build ScraperAPI URL with enhanced options
+      const params = new URLSearchParams({
+        api_key: this.apiKey,
+        url: url,
+        render: render.toString(),
+        country_code: countryCode,
+        premium: 'true', // Use premium proxies
+        session_number: attempt.toString(), // Different session per attempt
+        keep_headers: 'true'
+      })
+
+      if (useProxy) {
+        params.append('proxy', 'residential') // Use residential proxies
+      }
+
+      if (antiDetection) {
+        params.append('js_scenario', 'ebay_anti_detection')
+        params.append('custom_google', 'true')
+        params.append('premium_proxy', 'true')
+      }
+
+      const scraperUrl = `${this.baseUrl}/?${params.toString()}`
       
-      const response = await fetch(`${this.baseUrl}?api_key=${this.apiKey}&url=${encodeURIComponent(searchUrl)}&render=true`)
+      console.log(`🌐 Scraping with enhanced anti-detection (attempt ${attempt})`)
       
+      const response = await fetch(scraperUrl, {
+        method: 'GET',
+        headers: {
+          'User-Agent': userAgent,
+          'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
+          'Accept-Language': 'en-US,en;q=0.5',
+          'Accept-Encoding': 'gzip, deflate',
+          'DNT': '1',
+          'Connection': 'keep-alive',
+          'Upgrade-Insecure-Requests': '1',
+          'Cache-Control': 'no-cache',
+          'Pragma': 'no-cache'
+        },
+        signal: AbortSignal.timeout(timeout)
+      })
+
       if (!response.ok) {
-        throw new Error(`ScraperAPI error: ${response.status}`)
+        throw new Error(`ScraperAPI error: ${response.status} ${response.statusText}`)
       }
-      
+
       const html = await response.text()
-      const items = this.parseEbaySoldItems(html, limit)
       
-      // Update source stats
-      source.itemsScraped += items.length
-      source.lastScraped = new Date()
-      source.responseTime = Date.now() - startTime
-      source.status = 'active'
-      
-      // Update global stats
-      this.stats.totalItems += items.length
-      this.stats.lastUpdated = new Date()
-      this.stats.responseTime = (this.stats.responseTime + source.responseTime) / 2
-      
-      return items
-      
-    } catch (error) {
-      console.error('eBay scraping failed:', error)
-      source.errorCount++
-      source.status = 'error'
-      throw error
-    }
-  }
-
-  /**
-   * Scrape Facebook Marketplace
-   */
-  async scrapeFacebookMarketplace(query: string, limit: number = 20): Promise<ScrapedItem[]> {
-    const startTime = Date.now()
-    const source = this.sources.get('facebook')!
-    
-    try {
-      // Note: Facebook Marketplace requires special handling due to dynamic content
-      // This is a simplified version - in production you'd need more sophisticated handling
-      const searchUrl = `https://www.facebook.com/marketplace/search?query=${encodeURIComponent(query)}`
-      
-      const response = await fetch(`${this.baseUrl}?api_key=${this.apiKey}&url=${encodeURIComponent(searchUrl)}&render=true&wait=5000`)
-      
-      if (!response.ok) {
-        throw new Error(`ScraperAPI error: ${response.status}`)
+      // Enhanced content validation
+      if (html.length < 1000) {
+        throw new Error('Response too short, likely blocked or error page')
       }
-      
-      const html = await response.text()
-      const items = this.parseFacebookItems(html, limit)
-      
-      // Update source stats
-      source.itemsScraped += items.length
-      source.lastScraped = new Date()
-      source.responseTime = Date.now() - startTime
-      source.status = 'active'
-      
-      return items
-      
-    } catch (error) {
-      console.error('Facebook Marketplace scraping failed:', error)
-      source.errorCount++
-      source.status = 'error'
-      throw error
-    }
-  }
 
-  /**
-   * Parse eBay sold items from HTML
-   */
-  private parseEbaySoldItems(html: string, limit: number): ScrapedItem[] {
-    const items: ScrapedItem[] = []
-    
-    try {
-      // This is a simplified parser - in production you'd use a more robust HTML parser
-      const itemRegex = /<div[^>]*class="[^"]*s-item[^"]*"[^>]*>([\s\S]*?)<\/div>/g
-      let match
-      let count = 0
-      
-      while ((match = itemRegex.exec(html)) && count < limit) {
-        const itemHtml = match[1]
-        
-        // Extract item details (simplified parsing)
-        const titleMatch = itemHtml.match(/<h3[^>]*class="[^"]*s-item__title[^"]*"[^>]*>([^<]+)<\/h3>/)
-        const priceMatch = itemHtml.match(/<span[^>]*class="[^"]*s-item__price[^"]*"[^>]*>([^<]+)<\/span>/)
-        const soldMatch = itemHtml.match(/<span[^>]*class="[^"]*s-item__sold[^"]*"[^>]*>([^<]+)<\/span>/)
-        
-        if (titleMatch && priceMatch) {
-          const title = titleMatch[1].trim()
-          const priceText = priceMatch[1].trim()
-          const price = this.extractPrice(priceText)
-          
-          items.push({
-            id: `ebay_${Date.now()}_${count}`,
-            title,
-            price,
-            currency: 'USD',
-            condition: 'used',
-            location: 'Unknown',
-            shipping: 0,
-            soldCount: 1,
-            listingType: 'sold',
-            endTime: new Date().toISOString(),
-            url: '#',
-            soldPrice: price,
-            soldDate: new Date().toISOString(),
-            source: 'ebay',
-            scrapedAt: new Date()
-          })
-          
-          count++
+      // Check for blocking indicators in HTML
+      if (this.detectBlockingInHtml(html)) {
+        return {
+          success: false,
+          html: null,
+          error: 'Blocking detected in response content',
+          blocked: true,
+          attempt: 0,
+          duration: 0,
+          timestamp: new Date().toISOString(),
+          url: url
         }
       }
-      
-    } catch (error) {
-      console.error('Failed to parse eBay HTML:', error)
-    }
-    
-    return items
-  }
 
-  /**
-   * Parse Facebook Marketplace items from HTML
-   */
-  private parseFacebookItems(html: string, limit: number): ScrapedItem[] {
-    const items: ScrapedItem[] = []
-    
-    try {
-      // Facebook parsing is more complex due to dynamic content
-      // This is a simplified version
-      const itemRegex = /<div[^>]*data-testid="[^"]*marketplace-item[^"]*"[^>]*>([\s\S]*?)<\/div>/g
-      let match
-      let count = 0
-      
-      while ((match = itemRegex.exec(html)) && count < limit) {
-        const itemHtml = match[1]
-        
-        // Extract basic info (simplified)
-        const titleMatch = itemHtml.match(/<span[^>]*>([^<]+)<\/span>/)
-        const priceMatch = itemHtml.match(/\$([0-9,]+)/)
-        
-        if (titleMatch && priceMatch) {
-          const title = titleMatch[1].trim()
-          const price = parseFloat(priceMatch[1].replace(/,/g, ''))
-          
-          items.push({
-            id: `facebook_${Date.now()}_${count}`,
-            title,
-            price,
-            currency: 'USD',
-            condition: 'used',
-            location: 'Unknown',
-            shipping: 0,
-            soldCount: 0,
-            listingType: 'active',
-            endTime: new Date().toISOString(),
-            url: '#',
-            source: 'facebook',
-            scrapedAt: new Date()
-          })
-          
-          count++
+      // Check for eBay-specific error pages
+      if (this.detectEbayErrorPage(html)) {
+        return {
+          success: false,
+          html: null,
+          error: 'eBay error page detected in response',
+          blocked: true,
+          attempt: 0,
+          duration: 0,
+          timestamp: new Date().toISOString(),
+          url: url
         }
       }
-      
+
+      return {
+        success: true,
+        html,
+        statusCode: response.status,
+        attempt: 0,
+        duration: 0,
+        timestamp: new Date().toISOString(),
+        url: url
+      }
+
     } catch (error) {
-      console.error('Failed to parse Facebook HTML:', error)
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      throw new Error(`Scraping request failed: ${errorMessage}`)
+    }
+  }
+
+  /**
+   * Detect blocking patterns in HTML content
+   */
+  private detectBlockingInHtml(html: string): boolean {
+    const blockingPatterns = [
+      'access denied',
+      'blocked',
+      'forbidden',
+      'captcha',
+      'robot check',
+      'bot detection',
+      'rate limit exceeded',
+      'too many requests',
+      'please wait',
+      'verification required'
+    ]
+    
+    return blockingPatterns.some(pattern => 
+      html.toLowerCase().includes(pattern)
+    )
+  }
+
+  /**
+   * Detect eBay-specific error pages
+   */
+  private detectEbayErrorPage(html: string): boolean {
+    const ebayErrorPatterns = [
+      'sorry, we couldn\'t find that page',
+      'this listing was ended by the seller',
+      'this item is no longer available',
+      'page not found',
+      'error occurred',
+      'temporarily unavailable',
+      'maintenance mode'
+    ]
+    
+    return ebayErrorPatterns.some(pattern => 
+      html.toLowerCase().includes(pattern)
+    )
+  }
+
+  /**
+   * Wait for rate limiting
+   */
+  private async waitForRateLimit(requestsPerSecond: number): Promise<void> {
+    const minInterval = 1000 / requestsPerSecond
+    const now = Date.now()
+    const timeSinceLastRequest = now - this.lastRequestTime
+    
+    if (timeSinceLastRequest < minInterval) {
+      const waitTime = minInterval - timeSinceLastRequest
+      await this.sleep(waitTime)
     }
     
-    return items
+    this.lastRequestTime = Date.now()
   }
 
   /**
-   * Extract price from text
+   * Sleep utility function
    */
-  private extractPrice(priceText: string): number {
-    const match = priceText.match(/\$?([0-9,]+(?:\.[0-9]{2})?)/)
-    if (match) {
-      return parseFloat(match[1].replace(/,/g, ''))
+  private sleep(ms: number): Promise<void> {
+    return new Promise(resolve => setTimeout(resolve, ms))
+  }
+
+  /**
+   * Update scraping metrics
+   */
+  private updateMetrics(success: boolean, duration: number): void {
+    this.metrics.totalRequests++
+    
+    if (success) {
+      this.metrics.successfulRequests++
+    } else {
+      this.metrics.failedRequests++
     }
-    return 0
+
+    // Update average response time
+    const totalDuration = this.metrics.averageResponseTime * (this.metrics.totalRequests - 1) + duration
+    this.metrics.averageResponseTime = totalDuration / this.metrics.totalRequests
+
+    this.metrics.lastRequestTime = new Date().toISOString()
+    
+    // Update rate limit remaining (simple implementation)
+    if (success) {
+      this.metrics.rateLimitRemaining = Math.max(0, this.metrics.rateLimitRemaining - 1)
+    }
   }
 
   /**
-   * Get real-time scraper statistics
+   * Get current scraping metrics
    */
-  getStats(): ScrapedItem[] {
-    return Array.from(this.sources.values()).map(source => ({
-      id: source.id,
-      title: source.name,
-      price: source.itemsScraped,
-      currency: 'USD',
-      condition: source.status,
-      location: source.status,
-      shipping: source.errorCount,
-      soldCount: source.newListings,
-      listingType: source.status,
-      endTime: source.lastScraped.toISOString(),
-      url: source.baseUrl,
-      source: source.id as 'ebay' | 'facebook' | 'craigslist',
-      scrapedAt: source.lastScraped
-    }))
+  getMetrics(): ScrapingMetrics {
+    return { ...this.metrics }
   }
 
   /**
-   * Get source performance metrics
+   * Reset metrics (useful for testing)
    */
-  getSourceMetrics(): ScraperSource[] {
-    return Array.from(this.sources.values())
+  resetMetrics(): void {
+    this.metrics = {
+      totalRequests: 0,
+      successfulRequests: 0,
+      failedRequests: 0,
+      blockedRequests: 0,
+      averageResponseTime: 0,
+      lastRequestTime: new Date().toISOString(),
+      rateLimitRemaining: 10
+    }
   }
 
   /**
-   * Get overall scraper performance
+   * Queue a scraping request for rate-limited execution
    */
-  getPerformanceMetrics(): ScraperStats {
-    return { ...this.stats }
-  }
-
-  /**
-   * Simulate real-time data updates
-   */
-  async simulateRealTimeUpdates(): Promise<void> {
-    // Simulate real-time data updates every 30 seconds
-    setInterval(async () => {
-      for (const source of this.sources.values()) {
-        if (source.status === 'active') {
-          // Simulate new listings and price changes
-          source.newListings += Math.floor(Math.random() * 5)
-          source.priceChanges += Math.floor(Math.random() * 3)
-          source.itemsScraped += Math.floor(Math.random() * 10)
-          source.lastScraped = new Date()
-          
-          // Update global stats
-          this.stats.totalItems = Array.from(this.sources.values())
-            .reduce((sum, s) => sum + s.itemsScraped, 0)
-          this.stats.newListings = Array.from(this.sources.values())
-            .reduce((sum, s) => sum + s.newListings, 0)
-          this.stats.priceChanges = Array.from(this.sources.values())
-            .reduce((sum, s) => sum + s.priceChanges, 0)
-          this.stats.lastUpdated = new Date()
+  async queueScrapingRequest(url: string, options: ScrapingOptions = {}): Promise<ScrapingResult> {
+    return new Promise((resolve, reject) => {
+      this.requestQueue.push(async () => {
+        try {
+          const result = await this.scrapeUrl(url, options)
+          resolve(result)
+        } catch (error) {
+          reject(error)
         }
+      })
+
+      this.processQueue()
+    })
+  }
+
+  /**
+   * Process the request queue with rate limiting
+   */
+  private async processQueue(): Promise<void> {
+    if (this.isProcessingQueue || this.requestQueue.length === 0) {
+      return
+    }
+
+    this.isProcessingQueue = true
+
+    while (this.requestQueue.length > 0) {
+      const request = this.requestQueue.shift()
+      if (request) {
+        await request()
+        // Wait between requests for rate limiting
+        await this.sleep(500) // 500ms between requests
       }
-    }, 30000)
+    }
+
+    this.isProcessingQueue = false
+  }
+
+  /**
+   * Health check for the scraper service
+   */
+  async healthCheck(): Promise<{
+    status: 'healthy' | 'degraded' | 'unhealthy'
+    message: string
+    metrics: ScrapingMetrics
+  }> {
+    const metrics = this.getMetrics()
+    
+    if (metrics.totalRequests === 0) {
+      return {
+        status: 'healthy',
+        message: 'Service ready, no requests yet',
+        metrics
+      }
+    }
+
+    const successRate = metrics.successfulRequests / metrics.totalRequests
+    
+    if (successRate >= 0.9) {
+      return {
+        status: 'healthy',
+        message: `Service healthy with ${(successRate * 100).toFixed(1)}% success rate`,
+        metrics
+      }
+    } else if (successRate >= 0.7) {
+      return {
+        status: 'degraded',
+        message: `Service degraded with ${(successRate * 100).toFixed(1)}% success rate`,
+        metrics
+      }
+    } else {
+      return {
+        status: 'unhealthy',
+        message: `Service unhealthy with ${(successRate * 100).toFixed(1)}% success rate`,
+        metrics
+      }
+    }
   }
 }
 
-// Export singleton instance
-export const scraperService = new ScraperService()
-
-// Start real-time updates
-scraperService.simulateRealTimeUpdates()
+/**
+ * Legacy scraper function for backward compatibility
+ * @deprecated Use EnhancedScraperService instead
+ */
+export async function scrapeWithScraperAPI(
+  url: string, 
+  apiKey: string, 
+  options: ScrapingOptions = {}
+): Promise<string | null> {
+  console.warn('scrapeWithScraperAPI is deprecated. Use EnhancedScraperService instead.')
+  
+  const scraper = new EnhancedScraperService(apiKey)
+  const result = await scraper.scrapeUrl(url, options)
+  
+  return result.success ? result.html : null
+}

@@ -1,351 +1,498 @@
 /**
- * Statistical utilities for price analysis and outlier detection
+ * Enhanced Statistics Library for Lot Analyzer
+ * Provides robust outlier detection, confidence scoring, and statistical analysis
+ * Replaces basic IQR with advanced MAD + IQR hybrid approach
  */
 
-export interface PriceStatistics {
-  min: number
-  max: number
-  mean: number
-  median: number
-  mode: number
-  standardDeviation: number
-  variance: number
-  q1: number
-  q3: number
-  iqr: number
-  outlierCount: number
-  sampleSize: number
-}
-
-export interface OutlierFilterResult {
+export interface OutlierResult {
   filteredPrices: number[]
   outliers: number[]
-  statistics: PriceStatistics
-  method: 'iqr' | 'mad' | 'zscore'
+  method: string
+  confidence: number
+  statistics: {
+    originalCount: number
+    filteredCount: number
+    outlierCount: number
+    variance: number
+    standardDeviation: number
+    coefficientOfVariation: number
+    mad: number
+    iqr: number
+  }
+}
+
+export interface ConfidenceFactors {
+  sampleSize: number
+  recentCoverage: number
+  priceStability: number
+  dataQuality: number
+  overall: number
 }
 
 /**
- * Calculate comprehensive price statistics
+ * Enhanced outlier filtering with multiple methods
+ * Uses MAD for high-variance data, IQR for normal data, trimmed mean as fallback
  */
-export function calculatePriceStatistics(prices: number[]): PriceStatistics {
-  if (prices.length === 0) {
-    return getEmptyStatistics()
+export function filterOutliersSmart(prices: number[], options: {
+  method?: 'auto' | 'mad' | 'iqr' | 'trimmed'
+  confidenceThreshold?: number
+  minSampleSize?: number
+} = {}): OutlierResult {
+  const {
+    method = 'auto',
+    confidenceThreshold = 0.3,
+    minSampleSize = 4
+  } = options
+
+  if (prices.length < minSampleSize) {
+    return {
+      filteredPrices: prices,
+      outliers: [],
+      method: 'insufficient_data',
+      confidence: 0.1,
+      statistics: {
+        originalCount: prices.length,
+        filteredCount: prices.length,
+        outlierCount: 0,
+        variance: 0,
+        standardDeviation: 0,
+        coefficientOfVariation: 0,
+        mad: 0,
+        iqr: 0
+      }
+    }
   }
 
-  const sortedPrices = [...prices].sort((a, b) => a - b)
-  const n = sortedPrices.length
-
-  // Basic statistics
-  const min = sortedPrices[0]
-  const max = sortedPrices[n - 1]
-  const mean = sortedPrices.reduce((sum, price) => sum + price, 0) / n
-
-  // Median
-  const median = n % 2 === 0
-    ? (sortedPrices[n / 2 - 1] + sortedPrices[n / 2]) / 2
-    : sortedPrices[Math.floor(n / 2)]
-
-  // Mode (most frequent price range)
-  const mode = calculateMode(sortedPrices)
-
-  // Quartiles
-  const q1Index = Math.floor(n * 0.25)
-  const q3Index = Math.floor(n * 0.75)
-  const q1 = sortedPrices[q1Index]
-  const q3 = sortedPrices[q3Index]
-  const iqr = q3 - q1
-
-  // Variance and standard deviation
-  const variance = sortedPrices.reduce((sum, price) => sum + Math.pow(price - mean, 2), 0) / n
+  // Calculate basic statistics
+  const sorted = [...prices].sort((a, b) => a - b)
+  const mean = prices.reduce((sum, price) => sum + price, 0) / prices.length
+  const variance = prices.reduce((sum, price) => sum + Math.pow(price - mean, 2), 0) / prices.length
   const standardDeviation = Math.sqrt(variance)
+  const coefficientOfVariation = standardDeviation / mean
 
-  // Count outliers using IQR method
-  const lowerBound = q1 - 1.5 * iqr
-  const upperBound = q3 + 1.5 * iqr
-  const outlierCount = sortedPrices.filter(price => price < lowerBound || price > upperBound).length
-
-  return {
-    min,
-    max,
-    mean: Math.round(mean * 100) / 100,
-    median: Math.round(median * 100) / 100,
-    mode: Math.round(mode * 100) / 100,
-    standardDeviation: Math.round(standardDeviation * 100) / 100,
-    variance: Math.round(variance * 100) / 100,
-    q1: Math.round(q1 * 100) / 100,
-    q3: Math.round(q3 * 100) / 100,
-    iqr: Math.round(iqr * 100) / 100,
-    outlierCount,
-    sampleSize: n
-  }
-}
-
-/**
- * Filter outliers using IQR method (Tukey's method)
- */
-export function filterOutliersIQR(prices: number[], multiplier: number = 1.5): OutlierFilterResult {
-  if (prices.length < 4) {
-    return {
-      filteredPrices: prices,
-      outliers: [],
-      statistics: calculatePriceStatistics(prices),
-      method: 'iqr'
-    }
-  }
-
-  const statistics = calculatePriceStatistics(prices)
-  const lowerBound = statistics.q1 - (multiplier * statistics.iqr)
-  const upperBound = statistics.q3 + (multiplier * statistics.iqr)
-
-  const filteredPrices: number[] = []
-  const outliers: number[] = []
-
-  prices.forEach(price => {
-    if (price >= lowerBound && price <= upperBound) {
-      filteredPrices.push(price)
-    } else {
-      outliers.push(price)
-    }
-  })
-
-  return {
-    filteredPrices,
-    outliers,
-    statistics,
-    method: 'iqr'
-  }
-}
-
-/**
- * Filter outliers using MAD method (Median Absolute Deviation)
- */
-export function filterOutliersMAD(prices: number[], threshold: number = 3.5): OutlierFilterResult {
-  if (prices.length < 4) {
-    return {
-      filteredPrices: prices,
-      outliers: [],
-      statistics: calculatePriceStatistics(prices),
-      method: 'mad'
-    }
-  }
-
+  // Calculate MAD (Median Absolute Deviation)
   const median = calculateMedian(prices)
   const mad = calculateMAD(prices, median)
-  const lowerBound = median - (threshold * mad)
-  const upperBound = median + (threshold * mad)
 
-  const filteredPrices: number[] = []
+  // Calculate IQR
+  const q1 = sorted[Math.floor(sorted.length * 0.25)]
+  const q3 = sorted[Math.floor(sorted.length * 0.75)]
+  const iqr = q3 - q1
+
+  // Determine best method automatically
+  let selectedMethod = method
+  if (method === 'auto') {
+    if (prices.length >= 8 && coefficientOfVariation > 0.8) {
+      selectedMethod = 'mad' // High variance, use MAD
+    } else if (prices.length >= 6) {
+      selectedMethod = 'iqr' // Normal variance, use IQR
+    } else {
+      selectedMethod = 'trimmed' // Small sample, use trimmed mean
+    }
+  }
+
+  // Apply selected outlier filtering method
+  let filteredPrices: number[]
+  let outliers: number[]
+
+  switch (selectedMethod) {
+    case 'mad':
+      const madResult = filterOutliersMAD(prices, median, mad)
+      filteredPrices = madResult.filtered
+      outliers = madResult.outliers
+      break
+
+    case 'iqr':
+      const iqrResult = filterOutliersIQR(prices, q1, q3, iqr)
+      filteredPrices = iqrResult.filtered
+      outliers = iqrResult.outliers
+      break
+
+    case 'trimmed':
+      const trimmedResult = filterOutliersTrimmed(prices)
+      filteredPrices = trimmedResult.filtered
+      outliers = trimmedResult.outliers
+      break
+
+    default:
+      filteredPrices = prices
+      outliers = []
+  }
+
+  // Calculate confidence based on multiple factors
+  const confidence = calculateConfidence({
+    sampleSize: prices.length,
+    filteredCount: filteredPrices.length,
+    variance,
+    standardDeviation,
+    coefficientOfVariation,
+    method: selectedMethod
+  })
+
+  return {
+    filteredPrices,
+    outliers,
+    method: selectedMethod,
+    confidence,
+    statistics: {
+      originalCount: prices.length,
+      filteredCount: filteredPrices.length,
+      outlierCount: outliers.length,
+      variance,
+      standardDeviation,
+      coefficientOfVariation,
+      mad,
+      iqr
+    }
+  }
+}
+
+/**
+ * Filter outliers using Median Absolute Deviation (MAD)
+ * More robust than IQR for high-variance data
+ */
+function filterOutliersMAD(prices: number[], median: number, mad: number): {
+  filtered: number[]
+  outliers: number[]
+} {
+  const threshold = 2.5 * mad // 2.5 MAD is approximately 99% confidence
+  const filtered: number[] = []
   const outliers: number[] = []
 
-  prices.forEach(price => {
+  for (const price of prices) {
+    const deviation = Math.abs(price - median)
+    if (deviation <= threshold) {
+      filtered.push(price)
+    } else {
+      outliers.push(price)
+    }
+  }
+
+  return { filtered, outliers }
+}
+
+/**
+ * Filter outliers using Interquartile Range (IQR)
+ * Standard method for normal distribution data
+ */
+function filterOutliersIQR(prices: number[], q1: number, q3: number, iqr: number): {
+  filtered: number[]
+  outliers: number[]
+} {
+  const lowerBound = q1 - (iqr * 1.5)
+  const upperBound = q3 + (iqr * 1.5)
+  
+  const filtered: number[] = []
+  const outliers: number[] = []
+
+  for (const price of prices) {
     if (price >= lowerBound && price <= upperBound) {
-      filteredPrices.push(price)
+      filtered.push(price)
     } else {
       outliers.push(price)
     }
-  })
-
-  return {
-    filteredPrices,
-    outliers,
-    statistics: calculatePriceStatistics(filteredPrices),
-    method: 'mad'
   }
+
+  return { filtered, outliers }
 }
 
 /**
- * Filter outliers using Z-score method
+ * Filter outliers using trimmed mean approach
+ * Removes top and bottom 10% of data
  */
-export function filterOutliersZScore(prices: number[], threshold: number = 3): OutlierFilterResult {
-  if (prices.length < 4) {
-    return {
-      filteredPrices: prices,
-      outliers: [],
-      statistics: calculatePriceStatistics(prices),
-      method: 'zscore'
-    }
-  }
-
-  const statistics = calculatePriceStatistics(prices)
-  const filteredPrices: number[] = []
-  const outliers: number[] = []
-
-  prices.forEach(price => {
-    const zScore = Math.abs((price - statistics.mean) / statistics.standardDeviation)
-    if (zScore <= threshold) {
-      filteredPrices.push(price)
-    } else {
-      outliers.push(price)
-    }
-  })
-
-  return {
-    filteredPrices,
-    outliers,
-    statistics: calculatePriceStatistics(filteredPrices),
-    method: 'zscore'
-  }
-}
-
-/**
- * Smart outlier filtering that chooses the best method
- */
-export function filterOutliersSmart(prices: number[]): OutlierFilterResult {
-  if (prices.length < 4) {
-    return {
-      filteredPrices: prices,
-      outliers: [],
-      statistics: calculatePriceStatistics(prices),
-      method: 'iqr'
-    }
-  }
-
-  // Try IQR first
-  const iqrResult = filterOutliersIQR(prices)
+function filterOutliersTrimmed(prices: number[]): {
+  filtered: number[]
+  outliers: number[]
+} {
+  const sorted = [...prices].sort((a, b) => a - b)
+  const trimPercent = 0.1 // 10%
+  const trimCount = Math.floor(prices.length * trimPercent)
   
-  // If IQR removes too many items (>50%), try MAD
-  if (iqrResult.filteredPrices.length < prices.length * 0.5) {
-    const madResult = filterOutliersMAD(prices)
-    
-    // If MAD is better, use it
-    if (madResult.filteredPrices.length > iqrResult.filteredPrices.length) {
-      return madResult
-    }
-  }
+  const filtered = sorted.slice(trimCount, -trimCount)
+  const outliers = [
+    ...sorted.slice(0, trimCount),
+    ...sorted.slice(-trimCount)
+  ]
 
-  return iqrResult
+  return { filtered, outliers }
 }
 
 /**
- * Calculate median value
+ * Calculate Median Absolute Deviation (MAD)
+ * Robust measure of variability
  */
-export function calculateMedian(numbers: number[]): number {
-  if (numbers.length === 0) return 0
-  
-  const sorted = [...numbers].sort((a, b) => a - b)
-  const middle = Math.floor(sorted.length / 2)
-  
-  if (sorted.length % 2 === 0) {
-    return (sorted[middle - 1] + sorted[middle]) / 2
-  } else {
-    return sorted[middle]
-  }
-}
-
-/**
- * Calculate mode using price ranges
- */
-export function calculateMode(sortedPrices: number[]): number {
-  if (sortedPrices.length === 0) return 0
-  
-  const priceRanges = new Map<number, number>()
-  const rangeSize = Math.max(1, Math.ceil((sortedPrices[sortedPrices.length - 1] - sortedPrices[0]) / 10))
-
-  for (const price of sortedPrices) {
-    const range = Math.floor(price / rangeSize) * rangeSize
-    priceRanges.set(range, (priceRanges.get(range) || 0) + 1)
-  }
-
-  let maxCount = 0
-  let modeRange = sortedPrices[0]
-
-  priceRanges.forEach((count, range) => {
-    if (count > maxCount) {
-      maxCount = count
-      modeRange = range
-    }
-  })
-
-  return modeRange + rangeSize / 2
-}
-
-/**
- * Calculate Median Absolute Deviation
- */
-export function calculateMAD(prices: number[], median: number): number {
+function calculateMAD(prices: number[], median: number): number {
   const deviations = prices.map(price => Math.abs(price - median))
   return calculateMedian(deviations)
 }
 
 /**
- * Get empty statistics object
+ * Calculate median from array of numbers
  */
-export function getEmptyStatistics(): PriceStatistics {
-  return {
-    min: 0,
-    max: 0,
-    mean: 0,
-    median: 0,
-    mode: 0,
-    standardDeviation: 0,
-    variance: 0,
-    q1: 0,
-    q3: 0,
-    iqr: 0,
-    outlierCount: 0,
-    sampleSize: 0
+function calculateMedian(numbers: number[]): number {
+  if (numbers.length === 0) return 0
+  
+  const sorted = [...numbers].sort((a, b) => a - b)
+  const mid = Math.floor(sorted.length / 2)
+  
+  if (sorted.length % 2 === 0) {
+    return (sorted[mid - 1] + sorted[mid]) / 2
+  } else {
+    return sorted[mid]
   }
 }
 
 /**
- * Calculate confidence interval for mean
+ * Calculate confidence score based on multiple factors
+ * Returns value between 0 and 0.95
  */
-export function calculateConfidenceInterval(
-  prices: number[], 
-  confidenceLevel: number = 0.95
-): { lower: number; upper: number; confidence: number } {
-  if (prices.length < 2) {
-    return { lower: 0, upper: 0, confidence: 0 }
-  }
-
-  const statistics = calculatePriceStatistics(prices)
-  const standardError = statistics.standardDeviation / Math.sqrt(prices.length)
-  
-  // Z-score for 95% confidence (1.96)
-  const zScore = confidenceLevel === 0.95 ? 1.96 : 1.645
-  
-  const marginOfError = zScore * standardError
-  
-  return {
-    lower: Math.max(0, statistics.mean - marginOfError),
-    upper: statistics.mean + marginOfError,
-    confidence: confidenceLevel
-  }
-}
-
-/**
- * Detect price anomalies using multiple methods
- */
-export function detectPriceAnomalies(prices: number[]): {
-  anomalies: number[]
+function calculateConfidence(factors: {
+  sampleSize: number
+  filteredCount: number
+  variance: number
+  standardDeviation: number
+  coefficientOfVariation: number
   method: string
-  confidence: number
-} {
-  if (prices.length < 4) {
-    return { anomalies: [], method: 'insufficient_data', confidence: 0 }
+}): number {
+  let confidence = 0.5 // Base confidence
+
+  // Sample size factor
+  if (factors.sampleSize >= 12) {
+    confidence += 0.2
+  } else if (factors.sampleSize >= 8) {
+    confidence += 0.15
+  } else if (factors.sampleSize >= 6) {
+    confidence += 0.1
   }
 
-  // Try multiple detection methods
-  const iqrResult = filterOutliersIQR(prices)
-  const madResult = filterOutliersMAD(prices)
-  const zscoreResult = filterOutliersZScore(prices)
+  // Data quality factor (ratio of filtered to original)
+  const dataQualityRatio = factors.filteredCount / factors.sampleSize
+  if (dataQualityRatio >= 0.8) {
+    confidence += 0.15
+  } else if (dataQualityRatio >= 0.6) {
+    confidence += 0.1
+  } else if (dataQualityRatio < 0.4) {
+    confidence -= 0.1
+  }
 
-  // Choose the method that finds the most anomalies
-  const results = [
-    { method: 'iqr', anomalies: iqrResult.outliers, count: iqrResult.outliers.length },
-    { method: 'mad', anomalies: madResult.outliers, count: madResult.outliers.length },
-    { method: 'zscore', anomalies: zscoreResult.outliers, count: zscoreResult.outliers.length }
-  ]
+  // Price stability factor (coefficient of variation)
+  if (factors.coefficientOfVariation < 0.3) {
+    confidence += 0.1 // Very stable prices
+  } else if (factors.coefficientOfVariation < 0.5) {
+    confidence += 0.05 // Stable prices
+  } else if (factors.coefficientOfVariation > 0.8) {
+    confidence -= 0.15 // High variance
+  }
 
-  const bestResult = results.reduce((best, current) => 
-    current.count > best.count ? current : best
+  // Method factor
+  if (factors.method === 'mad') {
+    confidence += 0.05 // MAD is more robust
+  } else if (factors.method === 'trimmed') {
+    confidence -= 0.05 // Trimmed mean is less precise
+  }
+
+  // Clamp confidence between 0 and 0.95
+  return Math.max(0, Math.min(0.95, confidence))
+}
+
+/**
+ * Calculate weighted market value using multiple factors
+ * Combines median, mean, and outlier-filtered data
+ */
+export function calculateWeightedMarketValue(prices: number[], options: {
+  useOutliers?: boolean
+  weightMethod?: 'median' | 'mean' | 'hybrid'
+  confidenceThreshold?: number
+} = {}): {
+  value: number
+  confidence: number
+  method: string
+  factors: {
+    median: number
+    mean: number
+    outlierFiltered: number
+    sampleSize: number
+  }
+} {
+  const {
+    useOutliers = false,
+    weightMethod = 'hybrid',
+    confidenceThreshold = 0.3
+  } = options
+
+  if (prices.length === 0) {
+    return {
+      value: 0,
+      confidence: 0,
+      method: 'no_data',
+      factors: {
+        median: 0,
+        mean: 0,
+        outlierFiltered: 0,
+        sampleSize: 0
+      }
+    }
+  }
+
+  // Calculate basic statistics
+  const median = calculateMedian(prices)
+  const mean = prices.reduce((sum, price) => sum + price, 0) / prices.length
+
+  // Apply outlier filtering if requested
+  let outlierFiltered = median
+  let outlierConfidence = 0
+  let outlierMethod = 'none'
+
+  if (!useOutliers && prices.length >= 4) {
+    const outlierResult = filterOutliersSmart(prices)
+    if (outlierResult.filteredPrices.length > 0) {
+      outlierFiltered = calculateMedian(outlierResult.filteredPrices)
+      outlierConfidence = outlierResult.confidence
+      outlierMethod = outlierResult.method
+    }
+  }
+
+  // Calculate weighted value based on method
+  let finalValue: number
+  let finalMethod: string
+
+  switch (weightMethod) {
+    case 'median':
+      finalValue = median
+      finalMethod = 'median'
+      break
+
+    case 'mean':
+      finalValue = mean
+      finalMethod = 'mean'
+      break
+
+    case 'hybrid':
+    default:
+      // Hybrid approach: use outlier-filtered if confidence is high, otherwise median
+      if (outlierConfidence >= confidenceThreshold) {
+        finalValue = outlierFiltered
+        finalMethod = `outlier_filtered_${outlierMethod}`
+      } else {
+        finalValue = median
+        finalMethod = 'median_fallback'
+      }
+      break
+  }
+
+  // Calculate overall confidence
+  const overallConfidence = Math.min(0.95, 
+    (outlierConfidence + (prices.length / 20) * 0.3) / 2
   )
 
-  const confidence = Math.min(0.95, 0.5 + (bestResult.count / prices.length) * 0.4)
-
   return {
-    anomalies: bestResult.anomalies,
-    method: bestResult.method,
-    confidence
+    value: Math.round(finalValue * 100) / 100,
+    confidence: overallConfidence,
+    method: finalMethod,
+    factors: {
+      median,
+      mean,
+      outlierFiltered,
+      sampleSize: prices.length
+    }
   }
 }
+
+/**
+ * Analyze price trends and patterns
+ * Provides insights for market analysis
+ */
+export function analyzePriceTrends(prices: number[], dates?: string[]): {
+  trend: 'increasing' | 'decreasing' | 'stable' | 'volatile'
+  volatility: 'low' | 'medium' | 'high'
+  seasonality: boolean
+  insights: string[]
+} {
+  if (prices.length < 3) {
+    return {
+      trend: 'stable',
+      volatility: 'low',
+      seasonality: false,
+      insights: ['Insufficient data for trend analysis']
+    }
+  }
+
+  const sorted = [...prices].sort((a, b) => a - b)
+  const median = calculateMedian(prices)
+  const mean = prices.reduce((sum, price) => sum + price, 0) / prices.length
+  const variance = prices.reduce((sum, price) => sum + Math.pow(price - mean, 2), 0) / prices.length
+  const standardDeviation = Math.sqrt(variance)
+  const coefficientOfVariation = standardDeviation / mean
+
+  // Determine trend
+  let trend: 'increasing' | 'decreasing' | 'stable' | 'volatile'
+  if (coefficientOfVariation > 0.8) {
+    trend = 'volatile'
+  } else if (prices[prices.length - 1] > prices[0] * 1.1) {
+    trend = 'increasing'
+  } else if (prices[prices.length - 1] < prices[0] * 0.9) {
+    trend = 'decreasing'
+  } else {
+    trend = 'stable'
+  }
+
+  // Determine volatility
+  let volatility: 'low' | 'medium' | 'high'
+  if (coefficientOfVariation < 0.3) {
+    volatility = 'low'
+  } else if (coefficientOfVariation < 0.6) {
+    volatility = 'medium'
+  } else {
+    volatility = 'high'
+  }
+
+  // Check for seasonality (if dates provided)
+  let seasonality = false
+  if (dates && dates.length >= 6) {
+    // Simple seasonality check - look for patterns in price variations
+    const priceVariations = prices.slice(1).map((price, i) => 
+      Math.abs(price - prices[i]) / prices[i]
+    )
+    const avgVariation = priceVariations.reduce((sum, v) => sum + v, 0) / priceVariations.length
+    seasonality = avgVariation > 0.2 // High variation might indicate seasonality
+  }
+
+  // Generate insights
+  const insights: string[] = []
+  
+  if (trend === 'increasing') {
+    insights.push('Prices showing upward trend - consider holding for appreciation')
+  } else if (trend === 'decreasing') {
+    insights.push('Prices declining - good time to buy, but monitor for further drops')
+  } else if (trend === 'volatile') {
+    insights.push('High price volatility - consider dollar-cost averaging approach')
+  }
+
+  if (volatility === 'high') {
+    insights.push('High price volatility indicates market uncertainty')
+  } else if (volatility === 'low') {
+    insights.push('Stable prices suggest established market value')
+  }
+
+  if (seasonality) {
+    insights.push('Seasonal price patterns detected - timing may affect value')
+  }
+
+  return {
+    trend,
+    volatility,
+    seasonality,
+    insights
+  }
+}
+
+/**
+ * Legacy function for backward compatibility
+ * @deprecated Use filterOutliersSmart instead
+ */
+export function filterPriceOutliers(prices: number[]): number[] {
+  console.warn('filterPriceOutliers is deprecated. Use filterOutliersSmart instead.')
+  const result = filterOutliersSmart(prices)
+  return result.filteredPrices
+}
+

@@ -69,6 +69,39 @@ export interface EnhancedEbayData {
   }
 }
 
+// Scraped eBay data interface for the new parser
+export interface ScrapedEbayData {
+  title: string
+  activeCount: number
+  medianActivePrice: number
+  soldCount: number
+  medianSoldPrice: number
+  marketValue: number
+  ebayLinks: {
+    active: string
+    sold: string
+  }
+  searchQuery: string
+  lastUpdated: string
+  outlierFiltered: boolean
+  soldWindowDays: number
+  statistics: {
+    activePrices: number[]
+    soldPrices: number[]
+    outlierCount: number
+    confidence: number
+    soldDates: string[]
+    outlierMethod: string
+    dataSource?: string
+    blockingDetected?: boolean
+    successRate?: number
+    totalAttempts?: number
+    successfulAttempts?: number
+    realDataUsed?: boolean
+    fallbackUsed?: boolean
+  }
+}
+
 export interface ItemAnalysis {
   item: Item
   ebayData: EbayData[]
@@ -134,6 +167,10 @@ export interface AnalysisRequest {
     includeGptEstimate?: boolean
     maxEbayResults?: number
     filterOutliers?: boolean
+    soldWindowDays?: number
+    categoryHint?: string
+    maxSearchQueries?: number
+    debug?: boolean
   }
 }
 
