@@ -12,6 +12,7 @@ import {
 } from './simple-html-parser';
 import { filterOutliersSmart, calculateWeightedMarketValue } from './stats';
 import { EnhancedScraperService } from './scraper-service';
+import { getScraperAPIKey } from './env-config';
 
 export interface EbayDataSource {
   name: string;
@@ -38,9 +39,15 @@ export class EnhancedEbayService {
   private fallbackData: Map<string, MarketDataFallback> = new Map();
 
   constructor(apiKey?: string) {
-    this.scraperService = new EnhancedScraperService(apiKey || process.env.SCRAPER_API_KEY || '');
-    this.initializeDataSources();
-    this.initializeFallbackData();
+    try {
+      const scraperApiKey = apiKey || getScraperAPIKey();
+      this.scraperService = new EnhancedScraperService(scraperApiKey);
+      this.initializeDataSources();
+      this.initializeFallbackData();
+    } catch (error) {
+      console.error('❌ EnhancedEbayService: Failed to initialize:', error);
+      throw new Error(`EnhancedEbayService initialization failed: ${error instanceof Error ? error.message : String(error)}`);
+    }
   }
 
   /**

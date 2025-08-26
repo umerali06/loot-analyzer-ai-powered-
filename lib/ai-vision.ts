@@ -1,5 +1,6 @@
 import OpenAI from 'openai'
 import { Item } from '../types'
+import { getOpenAIAPIKey, isDevelopment } from './env-config'
 
 // Rate limiting configuration
 const RATE_LIMIT_DELAY = 1000 // 1 second between requests
@@ -17,15 +18,22 @@ class OpenAIConfig {
 
   static getInstance(): OpenAI {
     if (!this.instance) {
-      const apiKey = process.env.OPENAI_API_KEY
-      if (!apiKey) {
-        throw new Error('OPENAI_API_KEY environment variable is not set')
+      try {
+        const apiKey = getOpenAIAPIKey()
+        
+        if (isDevelopment()) {
+          console.log('🔑 OpenAI API Key loaded successfully');
+          console.log(`Key preview: ${apiKey.substring(0, 20)}...`);
+        }
+        
+        this.instance = new OpenAI({
+          apiKey,
+          timeout: 30000, // 30 second timeout
+        })
+      } catch (error) {
+        console.error('❌ Failed to initialize OpenAI configuration:', error);
+        throw new Error(`OpenAI configuration failed: ${error instanceof Error ? error.message : String(error)}`);
       }
-      
-      this.instance = new OpenAI({
-        apiKey,
-        timeout: 30000, // 30 second timeout
-      })
     }
     return this.instance
   }
@@ -90,18 +98,132 @@ export class AIVisionService {
   private timeoutMs: number = 30000 // Increased timeout to 30 seconds
 
   constructor() {
-    const apiKey = process.env.OPENAI_API_KEY
-    if (!apiKey) {
-      throw new Error('OPENAI_API_KEY environment variable is required')
+    try {
+      const apiKey = getOpenAIAPIKey()
+      
+      if (isDevelopment()) {
+        console.log('🔑 AIVisionService: OpenAI API Key loaded successfully');
+        console.log(`Key preview: ${apiKey.substring(0, 20)}...`);
+      }
+      
+      this.openai = new OpenAI({
+        apiKey,
+        timeout: this.timeoutMs,
+        maxRetries: this.maxRetries
+      })
+    } catch (error) {
+      console.error('❌ AIVisionService: Failed to initialize OpenAI client:', error);
+      throw new Error(`AIVisionService initialization failed: ${error instanceof Error ? error.message : String(error)}`);
     }
-    
-    this.openai = new OpenAI({
-      apiKey,
-      timeout: this.timeoutMs,
-      maxRetries: this.maxRetries
-    })
   }
 
+  /**
+   * Perform the main AI analysis with GPT-3.5-turbo
+   */
+  private async performAIAnalysis(imageUrl: string): Promise<Item[]> {
+    console.log('🤖 Performing main AI analysis with GPT-3.5-turbo...')
+    
+    try {
+      // Wait for rate limiting
+      await RateLimiter.waitForRateLimit()
+      
+      const response = await this.openai.chat.completions.create({
+        model: "gpt-3.5-turbo",
+        messages: [
+          {
+            role: "system",
+            content: "You are an expert at identifying collectible items. Analyze this image and return a JSON array of items with names, categories, and estimated values."
+          },
+          {
+            role: "user",
+            content: [
+              {
+                type: "text",
+                text: "Identify all visible items in this image. Return as JSON array with items containing: name, category, condition, estimatedValue (min, max, mean), confidence, and aiEstimate (reasoning, factors, value, confidence)."
+              },
+              {
+                type: "image_url",
+                image_url: {
+                  url: imageUrl,
+                  detail: "high"
+                }
+              }
+            ]
+          }
+        ],
+        max_tokens: 2000,
+        temperature: 0.1,
+        response_format: { type: "json_object" }
+      })
+
+      const content = response.choices[0]?.message?.content
+      if (!content) {
+        throw new Error('No response content from AI Vision')
+      }
+
+      console.log('AI Vision response received, parsing...')
+      
+      // Parse the JSON response
+      let parsedResponse: any
+      try {
+        parsedResponse = JSON.parse(content)
+      } catch (parseError) {
+        console.error('Failed to parse AI Vision response:', parseError)
+        console.log('Raw response:', content)
+        throw new Error('Failed to parse AI Vision response')
+      }
+
+      // Extract items array
+      const items = parsedResponse.items || parsedResponse
+      if (!Array.isArray(items)) {
+        console.error('Invalid response format from AI Vision:', parsedResponse)
+        throw new Error('Invalid response format from AI Vision')
+      }
+
+      console.log(`AI Vision identified ${items.length} items`)
+      
+      // Validate and enhance each item
+      const validatedItems = items.map((item: any, index: number) => {
+        let itemName = item.name || 'Unknown Collectible Item'
+        const genericNames = ['Item', 'Object', 'Piece', 'Toy', 'Furniture', 'Thing', 'Stuff', 'Product', 'Article']
+        
+        if (genericNames.includes(itemName)) {
+          const category = item.category || 'Collectibles'
+          itemName = this.generateSpecificNameFromCategory(category)
+        }
+        
+        return {
+          id: item.id || `ai_item_${Date.now()}_${index}`,
+          name: itemName,
+          category: item.category || 'Collectibles',
+          condition: item.condition || 'unknown',
+          estimatedValue: {
+            min: parseFloat(item.estimatedValue?.min) || 0,
+            max: parseFloat(item.estimatedValue?.max) || 0,
+            mean: parseFloat(item.estimatedValue?.mean) || 0,
+            currency: item.estimatedValue?.currency || 'USD'
+          },
+          confidence: parseFloat(item.confidence) || 0.5,
+          aiEstimate: {
+            reasoning: item.aiEstimate?.reasoning || 'AI analysis provided',
+            factors: Array.isArray(item.aiEstimate?.factors) ? item.aiEstimate.factors : [],
+            value: parseFloat(item.aiEstimate?.value) || 0,
+            confidence: parseFloat(item.aiEstimate?.confidence) || 0.5
+          }
+        }
+      })
+
+      return validatedItems
+
+    } catch (error) {
+      console.error('Main AI analysis failed:', error)
+      throw error
+    }
+  }
+
+  /**
+   * Main method to analyze an image using AI Vision
+   */
   async analyzeImage(imageUrl: string): Promise<Item[]> {
     try {
       // Handle both string URLs and base64 data
@@ -225,7 +347,7 @@ PENALTY FOR GENERIC RESPONSES: If you return generic names like "Books" or "Coll
 REWARD FOR THOROUGH ANALYSIS: Maximum items identified = Maximum value for the user.`
       
       const response = await this.openai.chat.completions.create({
-        model: "gpt-4o",
+        model: "gpt-3.5-turbo",
         messages: [
           {
             role: "system",
@@ -316,6 +438,19 @@ REWARD FOR THOROUGH ANALYSIS: Maximum items identified = Maximum value for the u
     } catch (error) {
       console.error('AI Vision analysis failed:', error)
       
+      // Check if it's a quota or rate limit error
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      
+      if (errorMessage.includes('quota') || errorMessage.includes('429') || errorMessage.includes('rate limit')) {
+        console.log('🚫 OpenAI quota exceeded or rate limited, using fallback system')
+        console.log('💡 Consider upgrading your OpenAI plan or waiting for quota reset')
+      } else if (errorMessage.includes('401') || errorMessage.includes('authentication')) {
+        console.log('🔑 OpenAI authentication failed, check your API key')
+        throw new Error('OpenAI API key is invalid or expired. Please check your configuration.')
+      } else if (errorMessage.includes('404') || errorMessage.includes('does not exist')) {
+        console.log('❌ Model not available, using fallback system')
+      }
+      
       // Enhanced intelligent fallback system
       return await this.generateIntelligentFallback(imageUrl, error)
     }
@@ -371,8 +506,8 @@ REWARD FOR THOROUGH ANALYSIS: Maximum items identified = Maximum value for the u
     console.log('🤖 Attempting alternative AI model analysis...')
     
     try {
-      // Try with different model configurations
-      const alternativeModels = ['gpt-4', 'gpt-3.5-turbo']
+      // Try with different model configurations - only use commonly available models
+      const alternativeModels = ['gpt-3.5-turbo', 'gpt-3.5-turbo-16k']
       
       for (const model of alternativeModels) {
         try {
@@ -385,6 +520,13 @@ REWARD FOR THOROUGH ANALYSIS: Maximum items identified = Maximum value for the u
         } catch (modelError) {
           const errorMessage = modelError instanceof Error ? modelError.message : String(modelError)
           console.log(`❌ Model ${model} failed:`, errorMessage)
+          
+          // If it's a quota error, don't try more models
+          if (errorMessage.includes('quota') || errorMessage.includes('429')) {
+            console.log('🚫 Quota exceeded, stopping alternative model attempts')
+            break
+          }
+          
           continue
         }
       }

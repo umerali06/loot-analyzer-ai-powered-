@@ -354,7 +354,7 @@ async function getEnhancedEbayData(itemName: string, item: any, requestOptions?:
   try {
     console.log(`🛒 Getting enhanced eBay data for: ${itemName}`)
     
-    const ebayService = new EnhancedEbayService(process.env.EBAY_API_KEY || '')
+    const ebayService = new EnhancedEbayService()
     
     // Optimized eBay search with AI-enhanced search terms (reduced timeout for speed)
     const searchTerm = item.title || item.ebaySearchTerms?.[0] || itemName
